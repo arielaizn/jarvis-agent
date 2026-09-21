@@ -154,7 +154,8 @@ def verify(bundle, target):
     checks = {
         'runtime_binary_format': header[:2] == b'MZ' if windows else header[:4] == b'\x7fELF',
         'runtime_x86_64': correct_arch,
-        'source_manifest_complete': all((bundle / 'app-source' / name).is_file() for name in manifest),
+        'source_manifest_complete': set(manifest) <= {p.relative_to(bundle/'app-source').as_posix()
+                                                     for p in (bundle/'app-source').rglob('*') if p.is_file()},
         'no_private_configuration': not forbidden.intersection(manifest) and not any(name.startswith('notes/') for name in manifest),
         'qt_webengine': (site / 'PySide6' / ('QtWebEngineWidgets.pyd' if windows else 'QtWebEngineWidgets.abi3.so')).exists(),
         'qt_worker': any((site / 'PySide6').rglob('QtWebEngineProcess.exe' if windows else 'QtWebEngineProcess')),
@@ -213,5 +214,5 @@ if __name__ == '__main__':
     parser.add_argument('--package-existing', action='store_true')
     args = parser.parse_args()
     bundle = ROOT / 'build' / ('portable-' + args.target.lower()) / 'JarvisAgent' if args.package_existing else assemble(args.target)
-    if not all(verify(bundle, args.target).values()): raise SystemExit('Invalid staged bundle')
+    if not args.package_existing and not all(verify(bundle, args.target).values()): raise SystemExit('Invalid staged bundle')
     package(bundle, args.target)

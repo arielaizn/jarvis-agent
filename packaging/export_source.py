@@ -12,7 +12,9 @@ SUFFIXES = {'.obj','.svg','.woff','.woff2','.py','.js','.mjs','.html','.css','.t
 
 
 def sources(root):
-    result = [root / name for name in ROOT_FILES if (root / name).is_file()]
+    # Enumerate actual directory entries: on macOS README.md and readme.md may
+    # refer to one file. A Linux manifest must never contain a phantom alias.
+    result = [p for p in root.iterdir() if p.name in ROOT_FILES and p.is_file() and not p.is_symlink()]
     for name in TREES:
         base = root / name
         if not base.exists(): continue
