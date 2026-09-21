@@ -255,6 +255,10 @@ function closeOrb(orb){
 }
 function resetCards(){
   ink.length = 0;
+  if(Q.has('probe')){
+    spawnOrbs(Array.from({length:3},(_,i)=>({kind:'folder',name:'Probe '+i,files:Array.from({length:3},(_,j)=>({title:'Probe note '+i+'-'+j,body:'Local gesture fixture',full:'Local gesture fixture'}))})));
+    return;
+  }
   fetch('/holo/api/tree').then(r => r.json()).then(spawnOrbs)
     .catch(() => spawnOrbs([{ kind:'folder', name:'HOLO', files:[{ title:'HOLO',
       body:'No notes served — point holo.json at a folder of markdown.', full:'' }] }]));
@@ -450,6 +454,7 @@ let lastPush = [-9e9, -9e9], lastTidy = -9e9, lastPalmD = null;
    tracking stage never clobber each other in state/holo-diag.json */
 const DIAG = {};
 function postDiag(patch){ Object.assign(DIAG, patch);
+  if(Q.has('probe'))return;
   try { fetch('/holo/api/diag', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(DIAG) }); } catch(_){} }
 function dropHand(i){
@@ -706,6 +711,7 @@ function tidyBoard(){
 }
 let stateTimer = 0;
 function postState(event, card){
+  if(Q.has('probe'))return;
   clearTimeout(stateTimer);
   stateTimer = setTimeout(() => { fetch('/holo/api/state', { method:'POST',
     headers:{'Content-Type':'application/json'},

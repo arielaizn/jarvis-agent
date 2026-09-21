@@ -350,6 +350,7 @@ class GalaxyApp:
 
     def state(self):
         return {
+            "profile_id": hashlib.sha256(str(self.root.resolve()).encode()).hexdigest()[:20],
             "model": self.model, "model_label": pretty_model(self.model),
             "default_model": self.default_model, "key_configured": self.brain.key_configured,
             "notes_configured": self.notes_configured, "focus": self.focus.state(),

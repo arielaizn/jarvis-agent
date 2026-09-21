@@ -162,3 +162,10 @@ def test_preflight_diagnostics_do_not_echo_untrusted_error_content(tmp_path, cap
     assert sentinel not in output
     assert 'REQUEST_FAILED' in output
     assert harness.counts == {'pass': 0, 'fail': 1, 'warn': 0}
+
+
+def test_wrong_profile_is_not_silently_attached(monkeypatch):
+    with local_endpoint(lambda path,body:(200,{**READY_STATE,'profile_id':'another-private-profile'})) as base:
+        monkeypatch.setattr(galaxy_service,'BASE',base)
+        with pytest.raises(galaxy_service.GalaxyServiceError,match='עותק אחר'):
+            galaxy_service._ready_state()

@@ -1,5 +1,6 @@
 """Launch and address the same local galaxy from the native Jarvis tool loop."""
 import json
+import hashlib
 import os
 import errno
 from core.file_lock import exclusive_file_lock
@@ -38,6 +39,10 @@ def _ready_state():
     if (not isinstance(state, dict) or not isinstance(state.get('known_models'), list)
             or not isinstance(state.get('model'), str) or type(state.get('key_configured')) is not bool):
         raise GalaxyServiceError('פורט 4700 תפוס על ידי שירות אחר.')
+    from core.app_paths import is_packaged
+    expected=hashlib.sha256(str(ROOT.resolve()).encode()).hexdigest()[:20]
+    if state.get('profile_id') != expected and (state.get('profile_id') or is_packaged()):
+        raise GalaxyServiceError('עותק אחר של ג׳רוויס משתמש בשרת. סגור את העותק מתיקיית הפיתוח ופתח שוב את האפליקציה המותקנת.')
     return state
 
 
