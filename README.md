@@ -64,7 +64,7 @@ Use Python 3.12 on the target operating system:
 
 ```sh
 python -m pip install -r requirements-build.txt
-python -m PyInstaller --noconfirm packaging/JarvisAgent.spec
+python -m PyInstaller --clean --noconfirm packaging/JarvisAgent.spec
 python packaging/smoke.py
 python packaging/package.py
 ```

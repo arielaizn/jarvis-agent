@@ -56,3 +56,13 @@ def test_uncertain_route_does_not_grant_access():
     def judge(*args,**kw):return {'answers':{'lane':{'choice':'computer','probabilities':{'computer':.4}}}}
     assert routing.choose_lane('something ambiguous',judge)=='workspace'
     assert routing.choose_lane('יש לך גישה לקבצים?',judge)=='capability'
+
+
+def test_clean_install_uses_bundled_acknowledgment(tmp_path,monkeypatch):
+    from core import acknowledgment
+    monkeypatch.setattr(acknowledgment,'ROOT',tmp_path)
+    monkeypatch.setattr(acknowledgment,'get_voice',lambda:'hebrew-deep')
+    asset=tmp_path/'assets/voice/ack-hebrew-deep.wav';asset.parent.mkdir(parents=True)
+    asset.write_bytes(b'RIFFtest-fixed-cue')
+    assert acknowledgment.path()==asset
+    assert acknowledgment.audio().startswith('data:audio/wav;base64,')

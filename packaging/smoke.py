@@ -29,6 +29,10 @@ with tempfile.TemporaryDirectory(prefix='jarvis-smoke-') as state:
                 with urlopen(f'http://127.0.0.1:{port}/state',timeout=1) as response:
                     live=json.load(response)
                 assert isinstance(live.get('known_models'),list)
+                with urlopen(f'http://127.0.0.1:{port}/ack',timeout=2) as response:
+                    cue=json.load(response)
+                assert str(cue.get('audio','')).startswith('data:audio/wav;base64,'), 'Bundled acknowledgment missing on first run'
+                record['checks']['fresh_install_acknowledgment']=True
                 record['checks']['packaged_server_worker']=True
                 result.write_text(json.dumps(record,indent=2));break
             except Exception:

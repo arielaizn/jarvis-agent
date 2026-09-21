@@ -15,7 +15,9 @@ def address(text):
 
 
 def path():
-    return ROOT / '.galaxy-runtime' / 'voice' / ('ack-' + get_voice() + '.wav')
+    name = 'ack-' + get_voice() + '.wav'
+    cached = ROOT / '.galaxy-runtime' / 'voice' / name
+    return cached if cached.is_file() else ROOT / 'assets' / 'voice' / name
 
 
 def audio():

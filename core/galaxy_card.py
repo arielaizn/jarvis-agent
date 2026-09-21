@@ -57,7 +57,7 @@ class Face(QWidget):
 
 class Card(QWidget):
     def __init__(self, port):
-        super().__init__(flags=Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
+        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
                          Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.base = 'http://127.0.0.1:%d' % port
         self.setWindowTitle('Jarvis focus card')

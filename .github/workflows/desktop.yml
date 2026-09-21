@@ -35,7 +35,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python -m pytest tests/test_desktop_packaging.py tests/test_parallel_agents.py tests/test_focus_engine.py tests/test_focus_privacy.py -q
       - name: Build desktop application
-        run: python -m PyInstaller --noconfirm packaging/JarvisAgent.spec
+        run: python -m PyInstaller --clean --noconfirm packaging/JarvisAgent.spec
       - name: Test built application on Linux
         if: runner.os == 'Linux'
         run: xvfb-run -a python packaging/smoke.py

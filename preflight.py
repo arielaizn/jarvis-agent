@@ -167,7 +167,9 @@ class Harness:
         return 'real file, live graph and immediately grounded answer'
 
     def vision(self):
-        raw = (self.root / 'tests' / 'fixtures' / 'preflight.jpg').read_bytes()
+        fixture = self.root / 'assets' / 'diagnostics' / 'preflight.jpg'
+        if not fixture.is_file():fixture = ROOT / 'tests' / 'fixtures' / 'preflight.jpg'
+        raw = fixture.read_bytes()
         self.require(raw.startswith(b'\xff\xd8\xff') and raw.endswith(b'\xff\xd9'), 'probe is not a JPEG')
         frame = 'data:image/jpeg;base64,' + base64.b64encode(raw).decode('ascii')
         answer = self.api('/see', {'question': 'What four digit number is visible? Answer with that number.', 'image': frame, 'media_type': 'image/jpeg', 'source': 'screen'})

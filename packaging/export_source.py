@@ -22,7 +22,7 @@ def sources(root):
             if p.is_symlink() or not p.is_file() or any(part in {'__pycache__','node_modules','.git','.next','out'} for part in p.parts): continue
             if p.suffix not in SUFFIXES or p.name == 'graph-data.js': continue
             result.append(p)
-    for name in ('config/jarvis.ico','tests/fixtures/preflight.jpg','web/package.json','web/package-lock.json','web/tsconfig.json','viewer/holo/LICENSE'):
+    for name in ('config/jarvis.ico','tests/fixtures/preflight.jpg','web/package.json','web/package-lock.json','web/tsconfig.json','viewer/holo/LICENSE','assets/voice/ack-hebrew-deep.wav','assets/voice/ack-hebrew-natural.wav','assets/diagnostics/preflight.jpg','assets/voice/README.md'):
         if (root / name).is_file(): result.append(root / name)
     return sorted(set(result))
 
