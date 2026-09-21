@@ -7,8 +7,8 @@ ROOT_FILES = {'main.py','ui.py','server.py','desktop.py','build.py','preflight.p
               'requirements.txt','requirements-browser.txt','requirements-build.txt','config.example.json',
               'LICENSE','THIRD_PARTY.md','UPSTREAM.md','readme.md','README.he.md','README.md','.gitignore','AGENTS.md',
               'start.command','install.command','skills-lock.json'}
-TREES = {'core','actions','memory','plugins','dashboard','viewer','tests','scripts','packaging','.github', '.agents/skills/typesafe-ai'}
-SUFFIXES = {'.obj','.svg','.woff','.woff2','.py','.js','.mjs','.html','.css','.txt','.md','.toml','.swift','.yml','.yaml','.spec','.in','.iss','.nsi','.desktop','.plist','.sh','.ps1'}
+TREES = {'core','actions','memory','plugins','dashboard','viewer','web','skills','docs','tests','scripts','packaging','.github', '.agents/skills/typesafe-ai'}
+SUFFIXES = {'.obj','.svg','.woff','.woff2','.py','.js','.mjs','.ts','.tsx','.wasm','.task','.glb','.html','.css','.txt','.md','.toml','.swift','.yml','.yaml','.spec','.in','.iss','.nsi','.desktop','.plist','.sh','.ps1'}
 
 
 def sources(root):
@@ -19,10 +19,10 @@ def sources(root):
         base = root / name
         if not base.exists(): continue
         for p in base.rglob('*'):
-            if p.is_symlink() or not p.is_file() or any(part in {'__pycache__','node_modules','.git'} for part in p.parts): continue
+            if p.is_symlink() or not p.is_file() or any(part in {'__pycache__','node_modules','.git','.next','out'} for part in p.parts): continue
             if p.suffix not in SUFFIXES or p.name == 'graph-data.js': continue
             result.append(p)
-    for name in ('config/jarvis.ico','tests/fixtures/preflight.jpg'):
+    for name in ('config/jarvis.ico','tests/fixtures/preflight.jpg','web/package.json','web/package-lock.json','web/tsconfig.json','viewer/holo/LICENSE'):
         if (root / name).is_file(): result.append(root / name)
     return sorted(set(result))
 

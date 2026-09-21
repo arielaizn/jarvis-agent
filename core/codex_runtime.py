@@ -64,6 +64,10 @@ class CodexError(RuntimeError):
 
 
 def _executable():
+    from core.credentials import read_config
+    configured = read_config(ROOT / 'config' / 'command-center.json').get('codex_path')
+    if configured and Path(configured).is_absolute() and Path(configured).is_file() and os.access(configured, os.X_OK):
+        return configured
     executable = shutil.which("codex")
     if executable:
         return executable
@@ -251,7 +255,7 @@ def action_config_args(sandbox):
 
 def execute(prompt, *, images=None, json_schema=None, cwd=None,
             execute_actions=False, progress=None, cancel=None, timeout=None,
-            session=None, session_id='default', question=None, background=False):
+            session=None, session_id='default', question=None, background=False, allow_web=True):
     """Run one exact-model task with the user's configured action access.
 
     Read-only note/vision answers ignore user MCP configuration. Action tasks
@@ -298,7 +302,7 @@ def execute(prompt, *, images=None, json_schema=None, cwd=None,
             args.append("--ignore-user-config")
             if background:
                 # Analysis agents cannot operate a shared desktop through shell/MCP.
-                args.extend(["-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "web_search=\"live\""])
+                args.extend(["-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", 'web_search="live"' if allow_web else 'web_search="disabled"'])
         else:
             args.extend(action_config_args(sandbox))
         if json_schema is not None:

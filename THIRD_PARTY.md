@@ -9,3 +9,21 @@ The build uses PyInstaller with its distribution exception: https://pyinstaller.
 The 3D viewer loads 3d-force-graph from jsDelivr. Its source and MIT license are available at https://github.com/vasturiano/3d-force-graph . TypeSafe skill content preserves its own license and attribution under `.agents/skills/typesafe-ai`.
 
 No ownership of upstream software, model names, trademarks or external editor products is claimed.
+
+## HOLO gestures
+
+`viewer/holo/` derives from https://github.com/zubair-trabzada/holo-gestures
+at commit 55626ff00f6b49c649a407ffdb3cad174479c637. Original MIT license is
+preserved in `viewer/holo/LICENSE`. Local changes scope its URLs, connect the
+Jarvis note index, make camera activation explicit, and honor muted test pages.
+MediaPipe Tasks Vision is Apache-2.0; three.js and GLTFLoader are MIT.
+The Apollo 11 and Triceratops models are Smithsonian CC0 digitizations.
+The upstream HOLO SHIM in both MediaPipe WASM loaders is preserved.
+
+## Command center
+
+The `web/` source uses Next.js, React, TypeScript, Tailwind, Framer Motion,
+Lucide and Zod. Dependency versions are locked in `web/package-lock.json`.
+Desktop packages serve the static export; Node is required only to develop or
+rebuild this frontend. The existing Python application remains the local API
+and desktop execution engine.

@@ -1,0 +1,4 @@
+import {CalendarDays,Mail,FileText,Lightbulb,CheckSquare,BookOpen,Link as LinkIcon} from 'lucide-react';
+import {IntelligenceCard} from '../lib/contracts';
+const icons={meeting:CalendarDays,calendar:CalendarDays,email:Mail,note:BookOpen,insight:Lightbulb,action:CheckSquare,document:FileText,research:BookOpen,source:LinkIcon,generic:Lightbulb};
+export function ResultCard({card}:{card:IntelligenceCard}){const Icon=icons[card.type];const safe=card.url&&/^https?:\/\//.test(card.url);return <article className={'result-card result-'+card.type}><div className="result-icon"><Icon size={18}/></div><div><span className="eyebrow">{card.type}</span><h3>{card.title}</h3>{card.time&&<time>{card.time}</time>}{card.subtitle&&<small>{card.subtitle}</small>}{card.body&&<p dir="auto">{card.body}</p>}{safe&&<a href={card.url} target="_blank" rel="noreferrer">פתיחת מקור ↗</a>}</div></article>}

@@ -22,3 +22,5 @@ button,input,select,textarea{font-family:inherit}button:focus-visible,input:focu
 .console{border-radius:26px;box-shadow:0 20px 65px #0005}.chip{padding:10px 16px;font-size:12px;border-color:#47796b66}.console-main{line-height:1.6}.quiet{border-radius:18px}dialog{border-radius:24px;box-shadow:0 30px 100px #0008}.status-dot{box-shadow:0 0 12px #88e8d255}
 @media(max-width:1000px){.topbar{padding:20px;gap:16px}.map-caption{top:120px;inset-inline-start:24px;max-width:210px}.map-caption h1{font-size:32px}.console{inset-inline:20px;width:auto;max-width:none}.top-actions{gap:6px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+body.command-embedded .topbar,body.command-embedded .console,body.command-embedded .map-caption{display:none}body.command-embedded .note-panel{top:24px;bottom:24px;max-height:calc(100vh - 48px)}

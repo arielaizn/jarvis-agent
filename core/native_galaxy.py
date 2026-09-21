@@ -28,7 +28,8 @@ def local_origin(url):
 
 class LocalPage(QWebEnginePage):
     def acceptNavigationRequest(self, url, navigation_type, main_frame):
-        return bool(main_frame and local_origin(url) and url.path() in ('', '/', '/index.html'))
+        allowed = ('', '/', '/index.html', '/command/index.html') if main_frame else ('/index.html', '/holo/holo.html')
+        return bool(local_origin(url) and url.path() in allowed)
 
     def createWindow(self, window_type):
         return None
@@ -150,6 +151,10 @@ class NativeBridge(QObject):
                 self.speechError.emit('הקול של Gemini 3.8 Live אינו זמין כרגע. התשובה מוצגת בחלון.')
             self._speechFinished.emit(generation)
         threading.Thread(target=wait, daemon=True).start()
+
+    @Slot()
+    def stopSpeech(self):
+        self.stop()
 
     def stop(self):
         with self.lock:

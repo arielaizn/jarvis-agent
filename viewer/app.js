@@ -388,3 +388,13 @@ async function boot(){
 // distraction identities, transcripts or session intent are exposed here.
 window.JarvisGalaxy=Object.freeze({inspect:()=>({ready:state.ready,muted:MUTED,embedded:EMBEDDED,native_bridge:!!nativeBridge(),ears:state.ears,sse:state.sse,...galaxy?.inspection(),screen_sharing:organs.live(organs.screenStream),screen_watch:organs.watching,webcam:organs.live(organs.cameraStream)})});
 boot();
+
+// Same-origin command-center source proof reuses the actual galaxy rules.
+let pendingProof=null;
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='jarvis-proof')return;
+  const nodes=event.data.nodes;if(!Array.isArray(nodes)||!nodes.every(Number.isInteger))return;
+  pendingProof={nodes,note_question:true};if(state.ready)galaxy.prove(pendingProof);
+});
+const announce=setInterval(()=>{if(!state.ready)return;clearInterval(announce);if(pendingProof)galaxy.prove(pendingProof);if(parent!==window)parent.postMessage({type:'jarvis-galaxy-ready'},location.origin);},100);
+if(new URLSearchParams(location.search).has('shell'))document.body.classList.add('command-embedded');

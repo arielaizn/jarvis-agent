@@ -1,0 +1,13 @@
+import {Organs} from './organs.js';
+import {routeCommand} from './commands.js';
+const dispatch=(type,detail)=>window.dispatchEvent(new CustomEvent('jarvis:'+type,{detail}));
+const api=async(path,payload)=>{const r=await fetch(path,{method:payload===undefined?'GET':'POST',headers:payload===undefined?{}:{'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw Error(d.error?.message||'הבקשה נכשלה');return d;};
+let ears=false,quietUntil=0;
+window.addEventListener('jarvis:ears',e=>{ears=!!e.detail});
+const organs=new Organs({api,answer:r=>dispatch('answer',r),say:t=>dispatch('say',t),fail:t=>dispatch('error',t),earsOn:()=>ears,onChange:s=>dispatch('organs',s),quietUntil:()=>quietUntil});
+window.jarvisOrgans=organs;
+window.jarvisRoute=routeCommand;
+window.jarvisQuiet=()=>{quietUntil=Date.now()+180000};
+const events=new EventSource('/events');
+events.addEventListener('say',e=>{const data=JSON.parse(e.data);dispatch('say',data.text)});
+window.addEventListener('pagehide',()=>{events.close();organs.stopScreen();organs.stopCamera();clearInterval(organs.organHeartbeat)});

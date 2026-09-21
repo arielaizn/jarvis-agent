@@ -19,7 +19,7 @@ import sys
 import threading
 import time
 import tempfile
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlsplit, parse_qs
 
 from core.galaxy_brain import BrainClient, BrainError, normalize_model, pretty_model, validated_jpeg
 
@@ -298,6 +298,8 @@ class GalaxyApp:
         self._organs_updated = 0.0
         self._organ_lock = threading.Lock()
         self.started_at = time.time()
+        from core.command_center import CommandCenter
+        self.command_center = CommandCenter(self)
 
     def start(self):
         self.focus.start_ticker()
@@ -749,7 +751,7 @@ class GalaxyHandler(BaseHTTPRequestHandler):
         # can omit Origin, so CORS alone cannot protect this response.
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self)")
         super().end_headers()
 
@@ -830,6 +832,30 @@ class GalaxyHandler(BaseHTTPRequestHandler):
             if not self.server.allow_request(path):
                 raise BrainError("RATE_LIMIT", "נשלחו יותר מדי בקשות. נסה בעוד רגע.", 429)
             payload = self.read_payload()
+            if path == '/command/speech':
+                center = self.server.app.command_center
+                if center.settings()['voice_provider'] == 'elevenlabs':
+                    from core.eleven_voice import speech
+                    result = speech(center.settings_path, payload.get('text'))
+                    center.voice_verified = True
+                    return self.json_response(result)
+                return self.json_response(self.server.app.speech(payload))
+            if path == '/command/transcribe':
+                from core.eleven_voice import transcribe
+                return self.json_response(transcribe(self.server.app.command_center.settings_path, payload))
+            if path == '/command/settings':
+                return self.json_response(self.server.app.command_center.save_settings(payload))
+            if path == '/command/request':
+                return self.json_response(self.server.app.command_center.start(payload), 202)
+            if path == '/command/confirm':
+                return self.json_response(self.server.app.command_center.approve(payload))
+            if re.fullmatch(r'/command/jobs/[a-f0-9]{32}/cancel', path):
+                return self.json_response(self.server.app.command_center.cancel(path.split('/')[3]))
+            if path == '/command/tool':
+                return self.json_response(self.server.app.command_center.tool(payload.get('tool'), payload.get('args')))
+            if path in {'/holo/api/state', '/holo/api/diag'}:
+                # Gesture coordinates, labels and camera data are deliberately not persisted.
+                return self.json_response({'ok': True})
             app = self.server.app
             if path == "/chat":
                 result = app.chat(payload)
@@ -893,6 +919,14 @@ class GalaxyHandler(BaseHTTPRequestHandler):
             self.security_check()
             path = self.request_path()
             app = self.server.app
+            if path == '/command/status':
+                return self.json_response(app.command_center.status())
+            if re.fullmatch(r'/command/jobs/[a-f0-9]{32}', path):
+                return self.json_response(app.command_center.get(path.rsplit('/', 1)[1]))
+            if path == '/holo/api/tree':
+                return self.json_response(app.command_center.tree())
+            if path == '/holo/api/props':
+                return self.json_response([p.name for p in sorted((app.viewer_dir / 'holo' / 'props').glob('*.glb')) if self.safe_static(p)][:6])
             if path == "/health":
                 return self.json_response({"ok": True, "service": "jarvis-galaxy", "uptime_seconds": round(time.time() - app.started_at), "key_configured": app.brain.key_configured, "model": app.model})
             if path == "/graph":
@@ -945,6 +979,8 @@ class GalaxyHandler(BaseHTTPRequestHandler):
         return True
 
     def static_response(self, path):
+        if path == '/' and (self.server.app.viewer_dir / 'command' / 'index.html').is_file() and not any(key in parse_qs(urlsplit(self.path).query) for key in ('focusprobe', 'focusdebug')):
+            path = '/command/index.html'
         relative = path.lstrip("/") or "index.html"
         file = self.server.app.viewer_dir / relative
         if not self.safe_static(file):

@@ -67,3 +67,10 @@ screenshots/
 # Desktop distributions and local packaging state
 /release/
 /desktop-smoke/
+
+# Command center secrets and reproducible frontend build inputs
+/config/command-center.json
+/web/node_modules/
+/web/.next/
+/web/out/
+/web/tsconfig.tsbuildinfo

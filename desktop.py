@@ -57,7 +57,7 @@ def smoke_test(root, destination):
     app = GalaxyApp(root)
     server = GalaxyServer(('127.0.0.1', 0), app)
     worker = threading.Thread(target=server.serve_forever, daemon=True);worker.start()
-    checks = {'native_render':False,'embedded_galaxy':False,'microphone_off':False,'native_bridge':False}
+    checks = {'native_render':False,'command_center':False,'embedded_galaxy':False,'microphone_off':False,'native_bridge':False}
     try:
         base = 'http://127.0.0.1:' + str(server.server_port)
         with urlopen(base + '/') as response: checks['viewer_http'] = response.status == 200
@@ -83,6 +83,7 @@ def smoke_test(root, destination):
                 except ValueError: return
             if settled or not value or not value.get('ready'): return
             settled = True
+            checks['command_center'] = bool(value.get('command_ready'))
             checks['embedded_galaxy'] = bool(value.get('rendered'))
             checks['microphone_off'] = bool(value.get('muted'))
             checks['native_bridge'] = bool(value.get('native_bridge'))
@@ -90,7 +91,7 @@ def smoke_test(root, destination):
             # Let WebEngine paint after graph initialization before capturing it.
             QTimer.singleShot(2500, finish)
         timer = QTimer()
-        timer.timeout.connect(lambda: panel.page.runJavaScript('JSON.stringify(window.JarvisGalaxy ? window.JarvisGalaxy.inspect() : null)', inspect))
+        timer.timeout.connect(lambda: panel.page.runJavaScript('''(() => { const c=window.JarvisCommand?.inspect(); if(!c?.ready)return null; let f=document.querySelector('.galaxy-frame'); if(!f){document.querySelector('.sidebar button[title="המוח השני"]')?.click();return null;} const g=f.contentWindow?.JarvisGalaxy?.inspect(); return JSON.stringify(g?{...g,command_ready:c.ready,native_bridge:c.native_bridge,muted:c.muted}:null); })()''', inspect))
         timer.start(300)
         def timeout():
             if not settled:

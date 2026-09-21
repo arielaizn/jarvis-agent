@@ -1,0 +1,3 @@
+https://github.com/zubair-trabzada/holo-gestures
+Commit: 55626ff00f6b49c649a407ffdb3cad174479c637
+Local adapter: explicit camera activation, mute, scoped URLs, Jarvis note index.
