@@ -281,6 +281,13 @@ class Harness:
                 if task.get('status') in {'queued', 'running'}:
                     self.api('/tasks/' + task['id'] + '/cancel', {})
 
+    def voice_address_filter(self):
+        for text, expected in [('אההה',False),('יוסי תביא לי את המים',False),
+                               ('ג׳רוויס תפתח את בלנדר',True)]:
+            result=self.api('/voice/intent',{'text':text})
+            self.require(result.get('accepted') is expected,'voice address filter returned the wrong decision')
+        return 'noise and background conversation rejected; addressed command accepted without executing it'
+
     def run(self):
         checks = [
             ('Server serves viewer', self.viewer),
@@ -292,6 +299,7 @@ class Harness:
             ('Vision answers a real JPEG', self.vision),
             ('Live voice returns real audio', self.live_voice),
             ('Immediate acknowledgment is ready', self.acknowledgment),
+            ('Voice responds only to addressed requests', self.voice_address_filter),
             ('Served files match disk', self.served_bytes),
             ('CONFIG IS NOT BROWSER-REACHABLE', self.config_private),
         ]

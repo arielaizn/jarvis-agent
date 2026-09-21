@@ -10,10 +10,10 @@ VERSION = '1.0.0'
 
 
 def prepare_runtime():
-    from core.app_paths import resource_root, runtime_root
+    from core.app_paths import resource_root, runtime_root, is_packaged
     root, resources = runtime_root(), resource_root()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if getattr(sys, 'frozen', False):
+    if is_packaged():
         from core.file_lock import exclusive_file_lock
         with (root / '.install.lock').open('a+') as lock, exclusive_file_lock(lock):
             manifest = json.loads((resources / 'app-manifest.json').read_text())
@@ -27,6 +27,13 @@ def prepare_runtime():
                     temporary = target.with_name(target.name + '.install-tmp')
                     shutil.copyfile(source, temporary)
                     os.replace(temporary, target)
+    native = resources / 'native' / 'focus-surface'
+    if is_packaged() and native.is_file():
+        target = root / '.runtime' / 'focus-surface'
+        target.parent.mkdir(exist_ok=True)
+        if not target.exists() or target.read_bytes() != native.read_bytes():
+            shutil.copyfile(native, target); target.chmod(0o700)
+        os.utime(target, None)
     config = root / 'config.json'
     if not config.exists():
         notes = root / 'notes'
@@ -79,7 +86,9 @@ def smoke_test(root, destination):
             checks['embedded_galaxy'] = bool(value.get('rendered'))
             checks['microphone_off'] = bool(value.get('muted'))
             checks['native_bridge'] = bool(value.get('native_bridge'))
-            timer.stop();finish()
+            timer.stop()
+            # Let WebEngine paint after graph initialization before capturing it.
+            QTimer.singleShot(2500, finish)
         timer = QTimer()
         timer.timeout.connect(lambda: panel.page.runJavaScript('JSON.stringify(window.JarvisGalaxy ? window.JarvisGalaxy.inspect() : null)', inspect))
         timer.start(300)
@@ -90,6 +99,11 @@ def smoke_test(root, destination):
         QTimer.singleShot(45000, timeout)
         ui._app.exec()
         checks['keys_not_bundled'] = not (root / 'config' / 'api_keys.json').exists()
+        if sys.platform == 'darwin':
+            import subprocess
+            native = root / '.runtime' / 'focus-surface'
+            sample = subprocess.run([str(native)],capture_output=True,text=True,timeout=5)
+            checks['bundled_focus_reader'] = sample.returncode == 0 and isinstance(json.loads(sample.stdout).get('readable'),bool)
         record = {'version': VERSION, 'platform': sys.platform, 'frozen':bool(getattr(sys,'frozen',False)), 'checks': checks}
         Path(destination).write_text(json.dumps(record, indent=2), encoding='utf-8')
         return 0 if all(checks.values()) else 1
@@ -103,7 +117,8 @@ def main():
     # macOS Finder and Windows windowed apps have no inherited terminal.
     if sys.stdout is None: sys.stdout = open(os.devnull, 'w')
     if sys.stderr is None: sys.stderr = open(os.devnull, 'w')
-    if getattr(sys, 'frozen', False):
+    from core.app_paths import is_packaged
+    if is_packaged():
         candidates = [Path.home()/'.local/bin',Path.home()/'.npm-global/bin',Path('/opt/homebrew/bin'),Path('/usr/local/bin')]
         if os.name == 'nt': candidates.append(Path(os.environ.get('APPDATA', Path.home()))/'npm')
         os.environ['PATH'] = os.pathsep.join([str(p) for p in candidates if p.is_dir()] + [os.environ.get('PATH','')])

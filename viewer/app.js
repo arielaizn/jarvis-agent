@@ -265,7 +265,13 @@ function setupEars(){
   recognition.onend=()=>{state.recognitionActive=false;if(state.ears&&!state.speaking)setTimeout(recognitionStart,RECOGNITION_RESTART_MS);};
   recognition.onresult=event=>{
     if(state.speaking||!state.ears)return;
-    for(let i=event.resultIndex;i<event.results.length;i++)if(event.results[i].isFinal)submit(event.results[i][0].transcript);
+    for(let i=event.resultIndex;i<event.results.length;i++)if(event.results[i].isFinal){
+      const text=event.results[i][0].transcript;
+      api('/voice/intent',{text}).then(decision=>{
+        if(decision.accepted&&state.ears&&!state.speaking)submit(decision.text||text);
+        else if(decision.reason==='use_explicit_address')$('#ear-button').title='אמור ג׳רוויס בתחילת הבקשה';
+      }).catch(()=>{});
+    }
   };
   recognition.onerror=event=>{
     if(['not-allowed','service-not-allowed','audio-capture'].includes(event.error)){

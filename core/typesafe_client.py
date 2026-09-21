@@ -94,7 +94,7 @@ def _answers(result, questions):
     return {"model": result["model"], "answers": clean}
 
 
-def evaluate(state, questions):
+def evaluate(state, questions, *, timeout=TIMEOUT_SECONDS):
     """Send only the explicitly supplied state. No automatic notes or screen access."""
     data = _request_data(state, questions)
     try:
@@ -106,7 +106,7 @@ def evaluate(state, questions):
     request = urllib.request.Request(ENDPOINT, data=data, headers={
         "Authorization": "Bearer " + key, "Content-Type": "application/json"})
     try:
-        with urllib.request.build_opener(_NoRedirect()).open(request, timeout=TIMEOUT_SECONDS) as response:
+        with urllib.request.build_opener(_NoRedirect()).open(request, timeout=timeout) as response:
             raw = response.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             raise TypeSafeError("TYPESAFE_RESPONSE_TOO_LARGE")

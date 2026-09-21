@@ -1657,6 +1657,7 @@ class JarvisLive:
         """Forward completed input transcripts; discard every Live answer."""
         print("[JARVIS] ASR receiver started")
         in_buf = []
+        if not hasattr(self, '_voice_pending'):self._voice_pending=set()
         while True:
             async for response in self.session.receive():
                 if not self._transport_current():
@@ -1674,11 +1675,9 @@ class JarvisLive:
                         utterance = " ".join(in_buf).strip()
                         in_buf = []
                         if utterance and not self._galaxy_mic_blocked():
-                            self._last_user_speech = time.monotonic()
-                            if self._in_galaxy_mode():
-                                self.ui.galaxy_utterance(utterance)
-                            else:
-                                asyncio.create_task(self._send_user_command(utterance))
+                            task=asyncio.create_task(self._handle_voice_utterance(utterance,self._mode_epoch,self._hud_generation))
+                            self._voice_pending.add(task)
+                            task.add_done_callback(self._voice_pending.discard)
                 if response.tool_call:
                     denied = [types.FunctionResponse(
                         id=fc.id, name=fc.name,
@@ -1688,6 +1687,28 @@ class JarvisLive:
                         await self.session.send_tool_response(function_responses=denied)
                 # response.data, model output, output transcription and session
                 # resumption handles are deliberately never consumed.
+
+    async def _handle_voice_utterance(self, utterance, epoch, generation=None):
+        """No acknowledgment, logging or task submission before address filtering."""
+        try:
+            from core import galaxy_service
+            decision = await asyncio.to_thread(galaxy_service.call, '/voice/intent',
+                                               {'text': utterance}, timeout=3)
+        except Exception:
+            # The explicit-address path also works while the local server boots.
+            from core.voice_intent import VoiceIntentGate
+            gate = VoiceIntentGate(judge=lambda *a, **k: (_ for _ in ()).throw(RuntimeError()))
+            decision = gate.decide(utterance)
+        if (not decision.get('accepted') or epoch != self._mode_epoch
+                or (generation is not None and generation != self._hud_generation)
+                or self._galaxy_mic_blocked() or self.ui.muted):
+            return
+        self._last_user_speech = time.monotonic()
+        utterance = decision.get('text', utterance)
+        if self._in_galaxy_mode():
+            self.ui.galaxy_utterance(utterance)
+        else:
+            await self._send_user_command(utterance)
 
     async def _play_audio(self):
         print("[JARVIS] 🔊 Play started")

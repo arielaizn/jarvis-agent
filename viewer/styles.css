@@ -14,3 +14,11 @@ dialog{color:var(--ink);max-width:460px;width:calc(100% - 32px);padding:25px}dia
 @media(max-width:700px){.request-mode{flex-wrap:wrap;gap:6px;font-size:11px}.request-mode .tiny{font-size:9px}.task-panel{padding:9px;gap:8px}.task-detail span{font-size:11px}.brain-options button{padding:12px 6px}}
 
 #agent-tasks{max-height:210px;overflow:auto}.agent-task{display:flex;gap:12px;align-items:start;padding:10px;border-bottom:1px solid #ffffff18}.agent-task .task-detail{flex:1;min-width:0}.agent-task p{white-space:pre-wrap;margin:6px 0;font-size:13px;max-height:120px;overflow:auto}.agent-task button{flex:none}.request-mode{flex-wrap:wrap;gap:12px}.request-mode select{background:#10202a;color:#e7f3fa;border:1px solid #34505f;border-radius:8px;padding:5px}
+
+/* Desktop studio: quiet surfaces, readable Hebrew and accessible controls. */
+:root{font-family:Arial,"Segoe UI",sans-serif;--bg:#091219;--panel:rgba(14,28,37,.94);--line:rgba(146,205,204,.17);--ink:#e1efee;--muted:#94adb5;--cyan:#88e8d2}
+button,input,select,textarea{font-family:inherit}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #b3f5e5;outline-offset:3px}
+.topbar{padding:24px 32px}.brand{font-size:23px}.brand small{font-size:12px}.map-caption{top:142px;inset-inline-start:34px;max-width:270px}.map-caption h1{font-size:clamp(30px,3.4vw,48px);letter-spacing:-.04em;line-height:1.2}
+.console{border-radius:26px;box-shadow:0 20px 65px #0005}.chip{padding:10px 16px;font-size:12px;border-color:#47796b66}.console-main{line-height:1.6}.quiet{border-radius:18px}dialog{border-radius:24px;box-shadow:0 30px 100px #0008}.status-dot{box-shadow:0 0 12px #88e8d255}
+@media(max-width:1000px){.topbar{padding:20px;gap:16px}.map-caption{top:120px;inset-inline-start:24px;max-width:210px}.map-caption h1{font-size:32px}.console{inset-inline:20px;width:auto;max-width:none}.top-actions{gap:6px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

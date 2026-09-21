@@ -75,39 +75,39 @@ def _read_full_config() -> dict:
 
 # Single source of truth for the release name — the window title, the header
 # badge and the readme must never disagree again.
-APP_VERSION  = "MARK LIV"
+APP_VERSION  = "JARVIS AGENT"
 APP_PROTOCOL = APP_VERSION.split()[-1]
 
-_DEFAULT_W, _DEFAULT_H = 980, 700
-_MIN_W,     _MIN_H     = 820, 580
-_LEFT_W  = 148
-_RIGHT_W = 340
+_DEFAULT_W, _DEFAULT_H = 1220, 800
+_MIN_W,     _MIN_H     = 920, 650
+_LEFT_W  = 164
+_RIGHT_W = 330
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
 
 class C:
-    BG        = "#00060a"
-    PANEL     = "#010d14"
-    PANEL2    = "#010f18"
-    BORDER    = "#0d3347"
-    BORDER_B  = "#1a5c7a"
-    BORDER_A  = "#0f4060"
-    PRI       = "#00d4ff"
-    PRI_DIM   = "#007a99"
-    PRI_GHO   = "#001f2e"
-    ACC       = "#ff6b00"
-    ACC2      = "#ffcc00"
-    GREEN     = "#00ff88"
-    GREEN_D   = "#00aa55"
-    RED       = "#ff3355"
-    MUTED_C   = "#ff3366"
-    TEXT      = "#8ffcff"
-    TEXT_DIM  = "#3a8a9a"
-    TEXT_MED  = "#5ab8cc"
-    WHITE     = "#d8f8ff"
-    DARK      = "#000d14"
-    BAR_BG    = "#011520"
+    BG        = "#091219"
+    PANEL     = "#101e27"
+    PANEL2    = "#142630"
+    BORDER    = "#233c47"
+    BORDER_B  = "#426b74"
+    BORDER_A  = "#294c58"
+    PRI       = "#88e8d2"
+    PRI_DIM   = "#69a89e"
+    PRI_GHO   = "#112c32"
+    ACC       = "#aecbff"
+    ACC2      = "#dec497"
+    GREEN     = "#9de3bf"
+    GREEN_D   = "#6aaf8d"
+    RED       = "#f09d9e"
+    MUTED_C   = "#849fa9"
+    TEXT      = "#e0efef"
+    TEXT_DIM  = "#78949f"
+    TEXT_MED  = "#a0bbc4"
+    WHITE     = "#effcf9"
+    DARK      = "#0e1b23"
+    BAR_BG    = "#193039"
 
 
 # Keys tied to the accent colour — status colours (ACC, GREEN, RED…) stay fixed
@@ -601,7 +601,7 @@ class HudCanvas(QWidget):
 
         if self._avatar is not None and self.hud_style == "face":
             self._avatar.step(dt, amp, speaking=self.speaking,
-                              muted=self.muted, state=self.state,
+                              muted=self.muted and not self.speaking, state=self.state,
                               v_open=v_open, v_wide=v_wide or 0.0,
                               v_level=v_level, v_seq=v_seq,
                               v_hop=(sched[2] if sched is not None else 0.02))
@@ -833,105 +833,42 @@ class HudCanvas(QWidget):
                        Qt.AlignmentFlag.AlignCenter, name)
 
     def paintEvent(self, _):
-        p = QPainter(self)
-        if not p.isActive():      # device not ready (e.g. 0-size during layout) — skip cleanly
-            return
+        from core.companion import paint_reactor
+        p=QPainter(self)
+        if not p.isActive(): return
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.fillRect(self.rect(), qcol(C.BG))
-
-        W, H = self.width(), self.height()
-        cx, cy = W / 2, H / 2
-        fw = min(W, H)
-
-        # grid dots — blitted from a cached layer; rebuilt only when the size
-        # or the theme's ghost colour changes (so live re-theming still works).
-        _gkey = (W, H, C.PRI_GHO)
-        if self._grid_cache is None or self._grid_key != _gkey:
-            self._grid_cache = self._make_grid(W, H)
-            self._grid_key   = _gkey
-        p.drawPixmap(0, 0, self._grid_cache)
-
-        # ── holographic head ────────────────────────────────────────────────
-        # Sized to the band between the top of the canvas and the status line,
-        # capped by width, so it fills the HUD at any window size — including
-        # fullscreen — without ever colliding with the status text below.
-        _sy_status = cy + fw * 0.40
-        if self._avatar is not None and self.hud_style == "face":
-            _band_t = 12.0
-            _band_h = max(60.0, _sy_status - 12.0 - _band_t)
-            _r_head = min(fw * 0.355, _band_h / (self._avatar.SPAN + 0.08))
-            _head_cy = _band_t + (_band_h - self._avatar.SPAN * _r_head) / 2.0 + _r_head
-
-            if self.muted:
-                _main = _acc = qcol(C.MUTED_C)
-            else:
-                _main = qcol(C.PRI)
-                if self.speaking:
-                    _acc = qcol(C.ACC)
-                elif self.state in ("THINKING", "PROCESSING"):
-                    _acc = qcol(C.ACC2)
-                elif self.state == "LISTENING":
-                    _acc = qcol(C.GREEN)
-                else:
-                    _acc = qcol(C.PRI)
-            self._avatar.paint(p, cx, _head_cy, _r_head, _main, _acc, qcol(C.BG))
-
-        # reactor core — the other centrepiece, and the fallback if the head
-        # could not be built. There is no third path: the old face.png branch
-        # was unreachable (no such file ships) and the bare orb it fell through
-        # to is what this replaces.
+        p.fillRect(self.rect(),qcol(C.BG))
+        w,h=self.width(),self.height();cx=w/2
+        p.setPen(QPen(qcol(C.BORDER),1));p.setBrush(qcol(C.PANEL))
+        p.drawRoundedRect(QRectF(1,1,w-2,h-2),24,24)
+        glow=QRadialGradient(cx,h*.42,min(w,h)*.65)
+        glow.setColorAt(0,qcol(C.PRI,26));glow.setColorAt(1,qcol(C.PANEL,0))
+        p.setPen(Qt.PenStyle.NoPen);p.setBrush(glow);p.drawRoundedRect(QRectF(2,2,w-4,h-4),24,24)
+        p.setFont(QFont('Arial',9));p.setPen(qcol(C.TEXT_DIM))
+        p.drawText(QRectF(20,25,w-40,22),Qt.AlignmentFlag.AlignCenter,'J A R V I S   /   '+('דמות חיה' if self.hud_style=='face' else 'ליבה'))
+        band=max(140,h-165);r=min(w*.29,band/2.65)
+        if self._avatar is not None and self.hud_style=='face':
+            cy=66+(band-self._avatar.SPAN*r)/2+r
+            self._avatar.paint(p,cx,cy,r,qcol(C.PRI),qcol(C.WHITE),qcol(C.PANEL))
         else:
-            _band_t = 12.0
-            _band_h = max(60.0, _sy_status - 12.0 - _band_t)
-            _r = min(W * 0.46, _band_h / 2.0)
-            self._paint_core(p, cx, _band_t + _band_h / 2.0, _r, W, _band_h)
+            paint_reactor(p,(cx,65+band*.48),min(w*.32,band*.42),self._core_phase,self._amp_disp,self.speaking)
+        if self.speaking: text='מדבר איתך, אדוני'
+        elif self.state in ('THINKING','PROCESSING'): text='עובד על הבקשה שלך'
+        elif self.muted:text='כאן כשתצטרך אותי'
+        else:text='מקשיב לפנייה שלך'
+        p.setFont(QFont('Arial',17,QFont.Weight.Medium));p.setPen(qcol(C.WHITE))
+        p.drawText(QRectF(20,h-100,w-40,34),Qt.AlignmentFlag.AlignCenter,text)
+        p.setFont(QFont('Arial',10));p.setPen(qcol(C.TEXT_DIM))
+        detail='המיקרופון כבוי' if self.muted else 'אפשר לפנות אליי בשם ג׳רוויס או בבקשה ברורה'
+        p.drawText(QRectF(20,h-61,w-40,26),Qt.AlignmentFlag.AlignCenter,detail)
+        # Voice bars are driven by the actual audio envelope, not a fake meter.
+        amp=0 if self.muted else self._amp_disp
+        p.setPen(Qt.PenStyle.NoPen);p.setBrush(qcol(C.PRI,110 if self.muted else 200))
+        for i in range(21):
+            height=3+amp*15*(.45+.55*math.cos(i*.8+self._tick*.14)**2)
+            p.drawRoundedRect(QRectF(cx+(i-10)*7-1.5,h-21-height/2,3,height),1.5,1.5)
+        p.end()
 
-        # status text
-        sy = _sy_status
-        if self.muted:
-            txt, col = 'המיקרופון מושתק',     qcol(C.MUTED_C)
-        elif self.speaking:
-            txt, col = '●  מדבר',  qcol(C.ACC)
-        elif self.state == "THINKING":
-            sym = "◈" if self._blink else "◇"
-            txt, col = f"{sym}  חושב",   qcol(C.ACC2)
-        elif self.state == "PROCESSING":
-            sym = "▷" if self._blink else "▶"
-            txt, col = f"{sym}  מעבד", qcol(C.ACC2)
-        elif self.state == "LISTENING":
-            sym = "●" if self._blink else "○"
-            txt, col = f"{sym}  מקשיב",  qcol(C.GREEN)
-        else:
-            sym = "●" if self._blink else "○"
-            txt, col = f"{sym}  {he_status(self.state)}", qcol(C.PRI)
-
-        p.setPen(QPen(col, 1))
-        p.setFont(QFont('Arial', 11, QFont.Weight.Bold))
-        p.drawText(QRectF(0, sy, W, 26), Qt.AlignmentFlag.AlignCenter, txt)
-
-        # waveform — reacts to the real audio level (mic while listening,
-        # JARVIS's own voice while speaking). Falls back to a gentle idle
-        # ripple when there's no sound. _amp_disp is the smoothed 0–1 level.
-        wy = sy + 30
-        N, bw = 36, 8
-        wx0 = (W - N * bw) / 2
-        amp = self._amp_disp
-        mid = (N - 1) / 2.0
-        for i in range(N):
-            if self.muted:
-                hgt, cl = 2, qcol(C.MUTED_C)
-            else:
-                env     = (1.0 - abs(i - mid) / mid) ** 0.7      # center-weighted hump
-                shimmer = 0.55 + 0.45 * math.sin(self._tick * 0.18 + i * 0.7)
-                idle    = 3.0 + 2.0 * math.sin(self._tick * 0.09 + i * 0.6)
-                hgt     = int(max(2, min(24, idle + amp * 22.0 * env * shimmer)))
-                if amp > 0.05:
-                    cl = qcol(C.PRI) if hgt > 12 else qcol(C.PRI_DIM)
-                else:
-                    cl = qcol(C.BORDER_B)
-            p.fillRect(QRectF(wx0 + i * bw, wy + 20 - hgt, bw - 1, hgt), cl)
-
-        p.end()   # end deterministically so the backing store never flushes an active painter
 
 class MetricBar(QWidget):
 
@@ -3228,7 +3165,7 @@ class MainWindow(QMainWindow):
 
         # Apply the saved UI colour BEFORE panels/stylesheets are built
         _ui_color = (_cfg.get("ui_color") or "").strip()
-        if _ui_color and _ui_color.lower() != DEFAULT_UI_COLOR:
+        if _ui_color and _ui_color.lower() not in {DEFAULT_UI_COLOR, "#00d4ff"}:
             apply_ui_accent(_ui_color)
 
         self.setWindowTitle(f"{_display} | {APP_VERSION}")
@@ -3262,7 +3199,7 @@ class MainWindow(QMainWindow):
         self.on_push_to_talk   = None   # callable: (enable: bool) -> str scope
         self.ptt_hold          = None   # callable: (held: bool) -> None — windowed chord
         self.wake_get_state    = None   # callable: () -> dict {enabled, awake, ready}
-        self._muted            = os.environ.get("JARVIS_OPEN_GALAXY", "1") == "1"
+        self._muted            = True  # The ear button is the only microphone opt-in.
         self._current_file: str | None = None
         self._remote_overlay: RemoteKeyOverlay | None = None
         self._customize_overlay: CustomizeOverlay | None = None
@@ -3278,8 +3215,8 @@ class MainWindow(QMainWindow):
         root.addWidget(self._build_header())
 
         body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(0)
+        body.setContentsMargins(20, 16, 20, 18)
+        body.setSpacing(16)
 
         self._left_panel = self._build_left_panel()
         body.addWidget(self._left_panel, stretch=0)
@@ -3409,6 +3346,11 @@ class MainWindow(QMainWindow):
         self._ready = self._check_config()
         if not self._ready:
             self._show_setup()
+
+        from core.companion import DesktopCompanion
+        self._companion = DesktopCompanion(self)
+        if os.environ.get("JARVIS_COMPANION_DISABLE") == "1":
+            self._companion.poller.stop()
 
         sc_mute = QShortcut(QKeySequence("F4"), self)
         sc_mute.activated.connect(self._toggle_mute)
@@ -3970,6 +3912,19 @@ class MainWindow(QMainWindow):
         self._drawer_btn.setCheckable(True)
         self._drawer_btn.clicked.connect(self._toggle_drawer)
         lay.addWidget(self._drawer_btn)
+        compact = QPushButton("חלונית עבודה")
+        compact.setObjectName("compactModeButton")
+        compact.setMinimumSize(100,32)
+        compact.setToolTip("מעבר לחלונית צפה. לחיצה כפולה עליה מחזירה את הממשק המלא.")
+        compact.setStyleSheet(self._drawer_btn.styleSheet())
+        compact.clicked.connect(lambda: self._companion.enter(manual=True))
+        lay.addWidget(compact)
+        for caption, visual in (("פנים", "face"), ("ליבה", "core")):
+            display_button = QPushButton(caption)
+            display_button.setMinimumSize(48,32)
+            display_button.setStyleSheet(compact.styleSheet())
+            display_button.clicked.connect(lambda checked=False, value=visual: self._choose_display(value))
+            lay.addWidget(display_button)
         self._galaxy_switch = QPushButton("הערות ומיקוד")
         self._galaxy_switch.setCheckable(True)
         self._galaxy_switch.clicked.connect(lambda checked: self._open_galaxy() if checked else self._show_hud_workspace())
@@ -4021,9 +3976,9 @@ class MainWindow(QMainWindow):
     def _build_left_panel(self) -> QWidget:
         w = QWidget()
         w.setFixedWidth(_LEFT_W)
-        w.setStyleSheet(f"background: {C.DARK}; border-right: 1px solid {C.BORDER};")
+        w.setStyleSheet(f"background: {C.DARK}; border: 1px solid {C.BORDER}; border-radius: 18px;")
         lay = QVBoxLayout(w)
-        lay.setContentsMargins(8, 10, 8, 10)
+        lay.setContentsMargins(14, 16, 14, 16)
         lay.setSpacing(6)
 
         hdr = QLabel('◈ מצב המחשב')
@@ -4105,6 +4060,7 @@ class MainWindow(QMainWindow):
 
         lay.addWidget(_sec('שיחה ופעילות'))
         self._log = LogWidget()
+        self._log.setPlaceholderText('הבקשה הבאה מתחילה כאן.\n\nאפשר להקליד למטה או להפעיל את המיקרופון ולפנות אל ג׳רוויס.\n\nבזמן עבודה במחשב, ג׳רוויס יעבור לחלונית קטנה לצדך.')
         lay.addWidget(self._log, stretch=1)
 
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
@@ -4136,14 +4092,14 @@ class MainWindow(QMainWindow):
         self._interrupt_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._interrupt_btn.setStyleSheet(f"""
             QPushButton {{
-                background: #140008; color: {C.MUTED_C};
+                background: #142630; color: {C.MUTED_C};
                 border: 1px solid {C.MUTED_C}; border-radius: 3px;
             }}
             QPushButton:hover {{
-                background: #200010; border: 1px solid #ff6688;
+                background: #1b3441; border: 1px solid #ff6688;
             }}
             QPushButton:pressed {{
-                background: #300018;
+                background: #254756;
             }}
         """)
         self._interrupt_btn.clicked.connect(self._do_interrupt)
@@ -5211,6 +5167,14 @@ class MainWindow(QMainWindow):
             'מערכת: התצוגה הוחלפה לדמות המדברת.' if want == "face"
             else 'מערכת: התצוגה הוחלפה לליבה המסתובבת.')
 
+    def _choose_display(self, style):
+        from memory.config_manager import save_hud_style
+        save_hud_style(style)
+        self.hud.hud_style=style
+        self.hud.update()
+        self._refresh_hud_btn()
+        self._show_hud_workspace()
+
     def _toggle_ptt(self):
         from memory.config_manager import (get_push_to_talk_enabled,
                                            save_push_to_talk_enabled)
@@ -5450,6 +5414,8 @@ class MainWindow(QMainWindow):
     # ── Irreversible-action confirmation ─────────────────────────────────────
 
     def _show_confirm_banner(self, title: str, detail: str):
+        if not self.isVisible() and hasattr(self,'_companion'):
+            self._companion.restore()
         self._hide_confirm_banner()
         ov = ConfirmBanner(title, detail, parent=self.centralWidget())
         ov.answered.connect(self._on_confirm_answered)
@@ -5541,6 +5507,7 @@ class MainWindow(QMainWindow):
             self._galaxy_panel.bridge.acknowledge()
 
     def closeEvent(self, event):
+        if hasattr(self, "_companion"): self._companion.shutdown()
         if self._galaxy_panel:
             self._galaxy_panel.close()
         super().closeEvent(event)

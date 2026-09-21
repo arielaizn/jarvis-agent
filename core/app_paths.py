@@ -5,14 +5,20 @@ import sys
 
 
 def resource_root():
+    if os.environ.get('JARVIS_PACKAGED') == '1' and os.environ.get('JARVIS_RESOURCE_DIR'):
+        return Path(os.environ['JARVIS_RESOURCE_DIR']).resolve()
     return Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
+
+
+def is_packaged():
+    return bool(getattr(sys, 'frozen', False) or os.environ.get('JARVIS_PACKAGED') == '1')
 
 
 def runtime_root():
     override = os.environ.get('JARVIS_DATA_DIR')
     if override:
         return Path(override).expanduser().resolve()
-    if not getattr(sys, 'frozen', False):
+    if not is_packaged():
         return Path(__file__).resolve().parents[1]
     if sys.platform == 'darwin':
         return Path.home() / 'Library' / 'Application Support' / 'Jarvis Agent'

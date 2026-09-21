@@ -62,6 +62,8 @@ async def receive_messages(live, messages):
     task = asyncio.create_task(live._receive_audio())
     try:
         await asyncio.wait_for(consumed.wait(), 1)
+        pending=list(getattr(live,'_voice_pending',()))
+        if pending:await asyncio.wait_for(asyncio.gather(*pending),2)
     finally:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
@@ -93,7 +95,8 @@ def test_typed_galaxy_commands_work_without_live_session_or_api_key():
     live.ui.write_log.assert_not_called()
 
 
-def test_finished_transcription_forwards_once_without_audio_memory_or_tools():
+def test_finished_transcription_forwards_once_without_audio_memory_or_tools(monkeypatch):
+    monkeypatch.setattr('core.galaxy_service.call',lambda *a,**k:{'accepted':True})
     live = transport()
     asyncio.run(receive_messages(live, [
         message("remember that"),
@@ -112,7 +115,8 @@ def test_finished_transcription_forwards_once_without_audio_memory_or_tools():
     assert denied[0].response.get("error")
 
 
-def test_turn_complete_fallback_handles_transcribers_without_finished_flag():
+def test_turn_complete_fallback_handles_transcribers_without_finished_flag(monkeypatch):
+    monkeypatch.setattr('core.galaxy_service.call',lambda *a,**k:{'accepted':True})
     live = transport()
     asyncio.run(receive_messages(live, [message("בוקר טוב"), message(complete=True)]))
     live.ui.galaxy_utterance.assert_called_once_with("בוקר טוב")
@@ -167,7 +171,8 @@ def test_hidden_galaxy_focus_speech_is_blocked_in_hud_too(monkeypatch):
     assert live._session_log == []
 
 
-def test_hud_live_is_also_asr_only_and_routes_once_to_rest():
+def test_hud_live_is_also_asr_only_and_routes_once_to_rest(monkeypatch):
+    monkeypatch.setattr('core.galaxy_service.call',lambda *a,**k:{'accepted':True})
     live = transport(active=False, session_active=False)
     config = live._build_config()
     assert config.tools == []
@@ -178,6 +183,18 @@ def test_hud_live_is_also_asr_only_and_routes_once_to_rest():
     live._execute_tool.assert_not_called()
     assert live.audio_in_queue.empty()
     live.ui.write_log.assert_not_called()
+
+
+def test_rejected_noise_never_acknowledges_logs_or_submits(monkeypatch):
+    monkeypatch.setattr('core.galaxy_service.call',lambda *a,**k:{'accepted':False,'reason':'not_addressed'})
+    for galaxy in (True,False):
+        live=transport(active=galaxy,session_active=galaxy)
+        live._send_user_command=AsyncMock()
+        asyncio.run(receive_messages(live,[message('יוסי תביא את המים',finished=True)]))
+        live._send_user_command.assert_not_called()
+        live.ui.galaxy_utterance.assert_not_called()
+        live.ui.acknowledge.assert_not_called()
+        live.ui.write_log.assert_not_called()
 
 
 def test_native_ear_button_controls_hardware_stream_lifetime(monkeypatch):

@@ -8,7 +8,7 @@ ROOT_FILES = {'main.py','ui.py','server.py','desktop.py','build.py','preflight.p
               'LICENSE','THIRD_PARTY.md','UPSTREAM.md','readme.md','README.he.md','README.md','.gitignore','AGENTS.md',
               'start.command','install.command','skills-lock.json'}
 TREES = {'core','actions','memory','plugins','dashboard','viewer','tests','scripts','packaging','.github', '.agents/skills/typesafe-ai'}
-SUFFIXES = {'.obj','.svg','.woff','.woff2','.py','.js','.mjs','.html','.css','.txt','.md','.toml','.swift','.yml','.yaml','.spec','.in','.iss','.desktop','.plist','.sh','.ps1'}
+SUFFIXES = {'.obj','.svg','.woff','.woff2','.py','.js','.mjs','.html','.css','.txt','.md','.toml','.swift','.yml','.yaml','.spec','.in','.iss','.nsi','.desktop','.plist','.sh','.ps1'}
 
 
 def sources(root):

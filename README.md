@@ -2,15 +2,15 @@
 
 Hebrew desktop assistant for macOS, Windows and Linux. Native Qt window, voice input and output, a 3D Markdown knowledge map, and server-owned AI task agents.
 
-This preview release currently provides the locally verified macOS Apple Silicon package. Windows, Linux and Intel macOS packages remain pending successful CI builds. The source and build definitions for all platforms are included.
+This preview contains locally built macOS Apple Silicon, Windows x64 and Linux x64 packages. The macOS app was launched and tested on macOS. Windows and Linux were assembled on macOS from target-specific Python runtimes and wheels, with structural checks; they have not been executed on those operating systems. Intel macOS is not included.
 
 ## Downloads
 
-Get the application from [GitHub Releases](https://github.com/arielaizn/jarvis-agent/releases). Each platform is built and smoke-tested on its own operating system. The release includes checksums and machine-readable smoke-test results.
+Get the application from [GitHub Releases](https://github.com/arielaizn/jarvis-agent/releases). The release includes checksums, a macOS runtime smoke report and separate Windows/Linux assembly reports. An assembly check does not establish that the application launches on its target OS.
 
-- **macOS 13+**: choose the Apple Silicon (arm64) or Intel (x64) DMG. Drag Jarvis Agent to Applications.
-- **Windows 10/11 x64**: run the per-user Setup EXE, or extract the portable ZIP and launch `JarvisAgent.exe`.
-- **Linux x64**: Ubuntu 24.04+ DEB, or extract the TAR.GZ and run `JarvisAgent`. A graphical desktop and the system Qt/Chromium dependencies listed in the package control file are required.
+- **macOS 14.2+ Apple Silicon**: download the arm64 DMG. Drag Jarvis Agent to Applications.
+- **Windows 10/11 x64**: run the per-user Setup EXE, or extract the portable ZIP and launch `Jarvis Agent.cmd`.
+- **Linux x64**: extract the TAR.GZ, run `./JarvisAgent/jarvis-agent`, and optionally run `./JarvisAgent/install-desktop.sh` to add it to the applications menu. Keep the extracted directory in place. Ubuntu 24.04+ with a graphical desktop is the intended target; install the system libraries listed below.
 
 The initial packages are not notarized by Apple or signed with a Windows Authenticode certificate. The operating system may require explicit approval to open them. No signing certificates or API credentials are distributed.
 
@@ -23,6 +23,14 @@ The initial packages are not notarized by Apple or signed with a Windows Authent
 
 Model availability, quotas and charges depend on your provider account. Requested model IDs are not silently replaced. Voice/vision use `gemini-3.8-live`; the configured alternate task provider is `gemini-3.8-flash`. Missing access is reported as an error.
 
+## Voice and desktop presence
+
+The microphone starts off. Completed speech is filtered before any acknowledgment or task: noise, fragments and background conversation are ignored. Saying “Jarvis” followed by a request is the immediate path. Natural requests without the name use a bounded TypeSafe judgment when your TypeSafe credential is configured; if that service is unavailable, say “Jarvis” explicitly. The filter cannot establish speaker identity from a transcript and is not voice authentication. Typed commands go directly to the task queue.
+
+For a computer task naming a supported app, Jarvis activates its existing window and switches to a small floating companion. It shows elapsed task time and server-reported progress, with stop and restore controls. It stays clear of the pointer and follows the screen where you work; it does not intercept scrolling or pretend to know which control the agent is using. Double-click the card to reopen Jarvis. During an active focus session, its buttons control pause/resume, abort and retarget. Background research agents do not shrink the desktop window.
+
+Use the **פנים**, **ליבה** and **חלונית עבודה** buttons for the animated portrait, orbital core and compact view. The microphone remains off until you turn it on.
+
 ## Parallel agents
 
 Up to three workers and twelve accepted active/queued tasks. Choose **סוכן רקע** or say **סוכן רקע: ...** for an independent analysis/research agent. Background Codex workers have no shell or configured desktop MCP tools. Gemini background workers have no action tools.
@@ -33,7 +41,7 @@ Computer and file-modification tasks retain the configured action tools and shar
 
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
-| Native desktop UI, settings, notes, task queue | Yes | Yes | Yes |
+| Native desktop UI, settings, notes, task queue | Runtime smoke-tested | Packaged; OS test pending | Packaged; OS test pending |
 | Microphone, audio and explicit screen/camera sharing | Subject to OS permissions and devices | Subject to OS permissions and devices | Subject to desktop/portal support and devices |
 | Codex task tools | External authenticated CLI required | External authenticated CLI required | External authenticated CLI required |
 | Focus foreground app + Chrome host tracking | Native macOS integration | Not yet supported | Not yet supported |
@@ -65,7 +73,20 @@ Linux needs a graphical display; CI runs the smoke test with `xvfb-run`. The smo
 
 For the configured live application, run `python preflight.py`. It makes real provider calls and checks notes capture, vision, voice, parallel agents, file execution, served files and configuration privacy. Any failed chain yields a non-zero exit; missing quota is a failure, not a successful skip.
 
-Build workflow: `.github/workflows/desktop.yml`. Tagged releases publish only after all platform builds and package smoke tests succeed.
+For local cross-platform assembly, install `uv` and (for Windows) `makensis`, then run:
+
+```sh
+python packaging/portable.py Windows
+python packaging/portable.py Linux
+```
+
+These commands download hash-pinned CPython 3.12 runtimes from [python-build-standalone](https://github.com/astral-sh/python-build-standalone), resolve OS-specific dependencies, and produce an NSIS installer/portable ZIP or a Linux TAR.GZ. They never claim to execute the foreign applications. Each bundle includes the application source and dependency licenses. Linux runtime dependencies on Ubuntu 24.04:
+
+```sh
+sudo apt-get install libportaudio2 libegl1 libopengl0 libnss3 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-render-util0 libxcb-image0 libasound2t64
+```
+
+Wayland can restrict desktop automation; use an X11 session for Xlib-based actions. Playwright browser binaries are an optional separate download. The native build workflow in `.github/workflows/desktop.yml` runs only when manually requested. Published preview binaries are built locally and uploaded to Releases.
 
 ## Attribution and license
 

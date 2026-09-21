@@ -10,6 +10,11 @@ manifest=root/'build'/'app-manifest.json';manifest.parent.mkdir(exist_ok=True)
 manifest.write_text(json.dumps([p.relative_to(root).as_posix() for p in files]))
 datas=[(str(p), 'app-source/'+p.relative_to(root).parent.as_posix()) for p in files]
 datas.append((str(manifest),'.'))
+if sys.platform=='darwin':
+    import subprocess
+    native=root/'build'/'focus-surface'
+    subprocess.run(['/usr/bin/swiftc',str(root/'scripts/focus_surface.swift'),'-o',str(native)],check=True)
+    datas.append((str(native),'native'))
 # Dynamic action/plugin discovery and module-dispatched worker processes.
 hidden=['main','ui','server','build','preflight']
 for package in ('core','actions','memory','dashboard','plugins','google.genai'):

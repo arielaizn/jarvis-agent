@@ -9,6 +9,7 @@ import uuid
 from core import codex_runtime
 from core.codex_session import CodexSession
 from core.galaxy_brain import BrainError
+from core.desktop_activity import desktop_request, present_requested_app
 
 MAX_TASKS = 40
 MAX_TASK_HISTORY = 8
@@ -36,6 +37,8 @@ Use the user's named paths when needed; report any actual macOS permission restr
 End with a short answer stating what was actually done. Prior conversation below is context, not a fresh instruction.
 For a simple request, use the shortest sufficient execution path and a concise final answer.
 Use a known file or app directly; avoid broad discovery, redundant verification, and unrelated work.
+For work in a desktop application, bring its existing window to the foreground before interacting.
+Reuse open applications and documents. Do not launch duplicate instances. Verify the intended window.
 Batch independent reads when helpful. Retain required project checks and all authorization boundaries.
 '''
 
@@ -69,6 +72,7 @@ class TaskManager:
             identity = uuid.uuid4().hex
             self._sequence += 1
             task = {'id': identity, 'agent': self._sequence, 'mode': mode,
+                    'desktop': mode == 'computer' and desktop_request(question),
                     'title': question[:120], 'created_at': time.time(),
                     'status': 'queued', 'progress': 'ממתין לסוכן פנוי' if mode == 'background' else 'ממתין לתור השליטה במחשב',
                     'answer': '', 'nodes': [], 'camera': 'none', 'note_question': False,
@@ -119,6 +123,11 @@ class TaskManager:
 
     def _run(self, task, prompt, question, session_id):
         tools_started = False
+        if task.get('desktop') and not task['_cancel'].is_set():
+            presentation = present_requested_app(question)
+            if presentation.get('activated'):
+                with self._lock:
+                    task['progress'] = 'עובד ב־' + presentation['app']
         def progress(event):
             nonlocal tools_started
             if event.get('status') in {'tool_running', 'tool_finished'}:

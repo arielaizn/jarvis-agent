@@ -472,8 +472,14 @@ class HoloAvatar:
         """Cached ramp of opaque surface brushes from `bg` to `primary`."""
         key = (bg.rgb(), primary.rgb())
         if self._lut_key != key:
-            self._lut_cache = [QBrush(_blend(bg, primary, 255.0 * (i + 0.5) / _LUT_N))
-                               for i in range(_LUT_N)]
+            self._lut_cache = []
+            for i in range(_LUT_N):
+                light = (i + .5) / _LUT_N
+                surface = _blend(bg, primary, 255.0 * light ** 1.16)
+                # Soft pearl highlights separate cheeks and brow from the rim.
+                highlight = max(0.0, (light - .64) / .36) ** 2
+                surface = _blend(surface, QColor('#edfff8'), 115 * highlight)
+                self._lut_cache.append(QBrush(surface))
             self._lut_key = key
         return self._lut_cache
 
@@ -547,7 +553,7 @@ class HoloAvatar:
         # every front-facing facet returns the same value, which is a flat mask.
         fres = np.clip(1.0 - nz, 0.0, 2.0) ** 1.7
         lam = np.clip(fn[:, 0] * -0.55 + fn[:, 1] * 0.50 + nz * 0.52, 0.0, 1.0)
-        bright = 0.26 + 0.20 * fres + 0.66 * lam ** 1.05
+        bright = 0.17 + 0.26 * fres + 0.72 * lam ** 1.15
         bright *= (self._fade[a][vis] + self._fade[b][vis] + self._fade[c][vis]) / 3.0
         bright *= 0.88 + 0.24 * amp
 

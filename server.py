@@ -263,6 +263,8 @@ class GalaxyApp:
             self.brain = brain or BrainClient(self.config, credential_root=self.root)
         from core.codex_tasks import TaskManager
         self.tasks = TaskManager(self.root, provider=self.brain.provider, on_fallback=self.quota_fallback)
+        from core.voice_intent import VoiceIntentGate
+        self.voice_intent_gate = VoiceIntentGate()
         self.model = self.brain.default_model
         self.default_model = self.model
         self.aliases = dict(MODEL_ALIASES)
@@ -842,6 +844,10 @@ class GalaxyHandler(BaseHTTPRequestHandler):
                 result = app.switch_brain(payload)
             elif path == "/tasks":
                 result = app.start_task(payload)
+            elif path == "/voice/intent":
+                result = app.voice_intent_gate.decide(payload.get('text'),
+                    awaiting_answer=bool(app.focus.state().get('intent_window')),
+                    task_active=bool(app.tasks.list().get('running')))
             elif re.fullmatch(r"/tasks/[a-f0-9]{32}/cancel", path):
                 result = app.tasks.cancel(path.split("/")[2])
             elif path == "/remember":
