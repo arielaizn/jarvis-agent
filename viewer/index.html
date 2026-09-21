@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#030609">
+  <meta name="referrer" content="no-referrer">
+  <title>ג׳רוויס | גלקסיית הידע</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.78.4/dist/3d-force-graph.min.js"></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div id="galaxy" role="img" aria-label="מפת ההערות בתלת ממד"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="ג׳רוויס, דף הבית"><span class="brand-mark" aria-hidden="true">J</span><span>ג׳רוויס<small>גלקסיית הידע</small></span></a>
+    <div class="model-area"><button id="model-chip" class="chip" aria-haspopup="dialog"><span class="status-dot"></span><span id="model-label" dir="ltr">טוען מוח</span><span aria-hidden="true">⌄</span></button><span id="connection-status" class="tiny">מתחבר לשרת</span></div>
+    <div class="top-actions"><button id="fit-button" class="quiet" title="כל ההערות">מבט רחב</button><button id="help-button" class="icon-button" aria-label="הוראות שימוש">?</button></div>
+  </header>
+  <main>
+    <section class="map-caption" aria-label="מצב הגלקסיה"><p class="eyebrow">המחשבות שלך, מחוברות</p><h1>כל רעיון.<br><span>כוכב אחד.</span></h1><p id="graph-summary">מאתר את ההערות שלך</p><div id="groups" class="group-list" aria-label="תיקיות ההערות"></div></section>
+    <div id="empty-state" class="glass empty-state" hidden><span class="empty-orbit" aria-hidden="true"></span><h2>מחכה לתיקיית ההערות שלך</h2><p>כאן תופיע מפה של קובצי ה־Markdown שלך.<br>החיבור לתיקייה עדיין לא הוגדר.</p></div>
+    <aside id="note-panel" class="glass note-panel" aria-label="הערה שנבחרה" hidden><div class="panel-heading"><span id="note-group" class="eyebrow"></span><button id="close-note" class="icon-button" aria-label="סגירת ההערה">×</button></div><h2 id="note-title"></h2><p id="note-excerpt" dir="auto"></p><div id="note-links" class="note-links"></div><span class="tiny">הטקסט מוצג מתוך קובץ ההערה</span></aside>
+    <aside id="focus-card" class="glass focus-card" aria-label="מפגש ריכוז" hidden><div class="focus-heading"><span id="focus-status">מפגש ריכוז</span><span class="status-dot"></span></div><strong id="focus-timer" dir="ltr">30:00</strong><p id="focus-detail">עבור לחלון העבודה שלך</p><div class="focus-buttons"><button id="focus-pause">השהיה</button><button id="focus-retarget">נעילת יעד</button><button id="focus-end">סיום</button></div></aside>
+    <div id="share-indicator" class="share-indicator" hidden><span class="recording-dot"></span><strong id="share-label">שיתוף מסך פעיל</strong><button id="stop-share">עצור שיתוף</button></div>
+    <div id="camera-indicator" class="camera-indicator" hidden><span class="status-dot"></span>מצלמה פעילה · זיהוי תנוחה מקומי<button id="stop-camera">כיבוי</button></div>
+    <section class="console glass" aria-label="שיחה עם ג׳רוויס">
+      <div class="console-top"><span class="assistant-state"><span id="assistant-dot" class="status-dot"></span><span id="assistant-status">אני כאן</span></span><div class="console-tools"><button id="focus-button" class="tool" title="התחלת מפגש ריכוז">ריכוז <kbd>30 דק׳</kbd></button><button id="screen-button" class="tool" aria-pressed="false">שיתוף מסך</button><button id="watch-button" class="tool" aria-pressed="false">שמירה על המסך</button><button id="camera-button" class="tool" aria-pressed="false">מצלמה</button></div></div>
+      <div id="answer" class="answer" role="status" aria-live="polite">אמור לי מה לעשות. לשאלה מתוך ההערות, בחר ״שאלה על ההערות״.</div>
+      <div id="task-panel" class="task-panel" role="status" aria-live="polite" hidden><div class="task-detail"><strong id="task-status">Codex עובד</strong><span id="task-progress"></span></div><button id="cancel-task" type="button">עצור הכול</button></div>
+      <div id="agent-tasks" aria-label="משימות הסוכנים" aria-live="polite"></div>
+      <div id="source-chips" class="source-chips" aria-label="מקורות התשובה"></div>
+      <div class="request-mode"><label for="task-mode">סוג משימה <select id="task-mode"><option value="computer">פעולות במחשב</option><option value="background">סוכן רקע: מחקר וניתוח</option></select></label><label for="notes-mode"><input id="notes-mode" type="checkbox">שאלה על ההערות</label><span id="brain-mode-label" class="tiny">בודק איזה מוח פעיל</span></div>
+      <form id="chat-form" autocomplete="off"><label class="sr-only" for="question">שאלה או הוראה</label><input id="question" name="question" dir="auto" placeholder="מה תרצה לדעת? אפשר גם: תזכור ש..." maxlength="12000"><button id="ear-button" class="ear-button" type="button" aria-pressed="false" aria-label="הפעלת מיקרופון" title="המיקרופון כבוי">מיקרופון כבוי</button><button id="send-button" class="send-button" type="submit" aria-label="שליחה">↑</button></form>
+      <div class="console-footer"><span id="privacy-label">מצלמה ומיקרופון כבויים</span><span id="mute-label" hidden>מצב בדיקה שקט</span><button id="demo-button" class="text-button">בדיקת מקורות</button></div>
+    </section>
+  </main>
+  <dialog id="model-dialog" class="glass"><div class="dialog-heading"><h2>הגדרות המוח</h2><button class="icon-button" data-close-dialog="model-dialog" aria-label="סגירה">×</button></div><p>בחירת Codex או Gemini נשמרת להפעלה הבאה. החלפה עוצרת את כל המשימות הפעילות.</p><div class="brain-options"><button id="brain-codex" type="button" aria-pressed="false"><strong dir="ltr">Codex CLI</strong><span dir="ltr">GPT 6 Astra · High</span></button><button id="brain-gemini" type="button" aria-pressed="false"><strong dir="ltr">Gemini</strong><span dir="ltr">3.8 Flash</span></button></div><p class="tiny">Codex משתמש בהתחברות שבמחשב. Gemini משתמש במפתח ששמרת בהגדרות האפליקציה.</p><form id="model-form"><label for="model-name">שם או מזהה מודל מדויק (עד הפעלה מחדש)</label><input id="model-name" dir="ltr" placeholder="astra" required><button class="primary" type="submit">החלף מודל</button></form><div id="model-options" class="model-options"></div><p id="model-error" class="error" role="alert"></p></dialog>
+  <dialog id="help-dialog" class="glass"><div class="dialog-heading"><h2>מה אפשר לומר</h2><button class="icon-button" data-close-dialog="help-dialog" aria-label="סגירה">×</button></div><p>אפשר לשלוח בקשות נוספות בזמן שהסוכנים עובדים. סוכן רקע עובד ללא שינוי קבצים או שליטה ביישומים. בקול: ״סוכן רקע: נתח את הרעיון הבא...״. פעולות במחשב מקבלות תור משותף.</p><ul><li>״תזכור שחלון הסיום הוא 900 מילישניות״</li><li>״חצי שעה על זה״</li><li>״תנעל על הלשונית הזאת״</li><li>״תן לי דקה״</li><li>״תחליף ל־Astra״</li><li>״מה דעתך על המסך הזה?״</li></ul><p>לשינוי יעד הריכוז, עבור ללשונית הרצויה ואמור ״תנעל על הלשונית הזאת״. כפתור הנעילה בכרטיס שולחן העבודה עושה אותה פעולה.</p><p>שם הסחת הדעת נאמר בקול באותו רגע ואינו נכתב. זיהוי תנוחה מתבצע במחשב; תמונת מצלמה נשלחת רק בבקשה מפורשת להסתכל עליך.</p><label class="language-control">שפת זיהוי דיבור<select id="speech-language"><option value="he-IL">עברית</option><option value="en-US">English</option></select></label><p class="tiny">זיהוי דיבור תלוי בדפדפן ועשוי להשתמש בשירות הדיבור שלו.</p></dialog>
+  <dialog id="demo-dialog" class="glass"><div class="dialog-heading"><h2>לראות מאיפה התשובה מגיעה</h2><button class="icon-button" data-close-dialog="demo-dialog" aria-label="סגירה">×</button></div><p>אלה שאלות אמיתיות למוח הפעיל. התנועה תיקבע לפי המקורות שהתשובה תשתמש בהם.</p><button id="demo-single" class="demo-question">שאלה על הערה אחת</button><button id="demo-cluster" class="demo-question">שאלה שמשלבת כמה הערות</button><button id="demo-smalltalk" class="demo-question">בוקר טוב</button><p class="tiny">ארבעה מקורות ומעלה מאירים יחד. שיחת חולין משאירה את המצלמה במקום.</p></dialog>
+  <aside id="focus-debug" class="glass debug-panel" hidden><strong>אבחון ריכוז</strong><pre id="debug-content"></pre></aside>
+  <section id="probe-results" class="glass probe-results" hidden aria-label="תוצאות בדיקת דפדפן"></section>
+  <video id="screen-video" muted playsinline hidden></video><video id="camera-video" muted playsinline hidden></video>
+</body>
+</html>

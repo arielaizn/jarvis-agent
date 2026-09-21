@@ -1,0 +1,89 @@
+name: Desktop distributions
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            label: macOS-arm64
+          - os: macos-15-intel
+            label: macOS-x64
+          - os: windows-2022
+            label: Windows-x64
+          - os: ubuntu-24.04
+            label: Linux-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Linux desktop libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libportaudio2 libegl1 libopengl0 libnss3 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-render-util0 libxcb-image0 libasound2t64
+      - name: Python dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Portable source tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests/test_desktop_packaging.py tests/test_parallel_agents.py tests/test_focus_engine.py tests/test_focus_privacy.py -q
+      - name: Build desktop application
+        run: python -m PyInstaller --noconfirm packaging/JarvisAgent.spec
+      - name: Test built application on Linux
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python packaging/smoke.py
+      - name: Test built application on macOS or Windows
+        if: runner.os != 'Linux'
+        run: python packaging/smoke.py
+      - name: Locate Windows installer compiler
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Add-Content $env:GITHUB_PATH 'C:\Program Files (x86)\Inno Setup 6'
+      - name: Create native packages
+        run: python packaging/package.py
+      - name: Upload verified packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-Agent-${{ matrix.label }}
+          path: |
+            release/*
+            build/smoke-*.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-${{ matrix.label }}
+          path: |
+            build/**/warn-*.txt
+            build/smoke-*.json
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Jarvis-Agent-*
+          path: artifacts
+          merge-multiple: true
+      - name: Publish tested desktop packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" --title "Jarvis Agent $RELEASE_TAG" --notes 'Native desktop packages. See README for setup, OS-specific capabilities, signing status and provider requirements.' artifacts/release/* artifacts/build/smoke-*.json

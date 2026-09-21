@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1">
+  <title>ג׳רוויס | התחברות</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #07090f;
+      --card:   rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --accent: #6366f1;
+      --adim:   rgba(99,102,241,0.15);
+      --text:   #dde3ed;
+      --muted:  #94a0b4;
+    }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      width: 340px;
+      padding: 44px 36px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: normal;
+      margin-bottom: 6px;
+    }
+    .logo em { color: var(--accent); font-style: normal; }
+    .sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: normal;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 28px;
+    }
+    .key-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .key-input {
+      width: 100%;
+      padding: 18px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 30px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      letter-spacing: normal;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      caret-color: var(--accent);
+    }
+    .key-input::placeholder {
+      color: rgba(94,106,126,0.5);
+      letter-spacing: normal;
+      font-size: 20px;
+    }
+    .key-input:focus {
+      border-color: var(--accent);
+      background: var(--adim);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    .err {
+      font-size: 12px;
+      color: #f87171;
+      min-height: 18px;
+      margin-bottom: 14px;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: normal;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover  { opacity: 0.88; }
+    .btn:active { transform: scale(0.98); }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-7px); }
+      40%,80% { transform: translateX(7px); }
+    }
+    .shake { animation: shake 0.35s ease; }
+    .voice-note {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 20px;
+      line-height: 1.6;
+      text-align: start;
+    }
+    .voice-note code {
+      background: rgba(255,255,255,0.07);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 9px;
+    }
+    #reconnecting {
+      display: none;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+
+    /* Hebrew reading order; identifiers remain left-to-right. */
+    .url, .key-input, code, .fc-size, .fc-status, #flags-url { direction: ltr; unicode-bidi: isolate; }
+    .msg { overflow-wrap: anywhere; text-align: start; white-space: pre-wrap; }
+    .logo, .pill, .lbl, .btn, .sub { letter-spacing: normal; }
+    button:focus-visible, label:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .card { max-width: calc(100vw - 32px); }
+    #inp { min-width: 0; }
+    @media (max-width: 480px) {
+      header { flex-wrap: wrap; padding: 10px; gap: 7px; }
+      .url { font-size: 9px; }
+      footer { flex-wrap: wrap; padding: 8px; gap: 6px; }
+      #inp { flex-basis: calc(100% - 70px); }
+      .msg, .msg-file { max-width: 94%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="logo"><em>ג׳</em>רוויס</div>
+    <div class="sub">חיבור מהטלפון</div>
+    <p id="reconnecting">מתחבר מחדש…</p>
+    <p class="hint">בתוכנת ג׳רוויס במחשב לחץ על <strong style="color:var(--text)">חיבור מהטלפון</strong> לקבלת קוד לסריקה או מפתח חיבור.</p>
+    <div class="key-wrap">
+      <input class="key-input" id="key" type="text" aria-label="מפתח חיבור" dir="ltr" maxlength="6"
+             autocomplete="off" autocorrect="off" spellcheck="false"
+             placeholder="· · · · · ·">
+    </div>
+    <div class="err" id="err" role="alert"></div>
+    <button class="btn" onclick="doLogin()">התחברות</button>
+    <p class="voice-note">
+      <strong style="color:var(--text)">שיחה קולית:</strong> נדרשת הרשאת מיקרופון בדפדפן.
+      בחיבור מאובטח אפשר להפעיל אותה מכפתור המיקרופון בלוח הבקרה.
+    </p>
+  </div>
+
+  <script>
+    // Try auto-reconnect with stored device token (set on first QR login)
+    (async function() {
+      const devTok = localStorage.getItem('jarvis_device_token');
+      if (!devTok) return;
+      document.getElementById('reconnecting').style.display = 'block';
+      try {
+        const r = await fetch('/api/device-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_token: devTok }),
+        });
+        const d = await r.json();
+        if (d.ok && d.token) {
+          sessionStorage.setItem('jarvis_key', d.key);
+          sessionStorage.setItem('jarvis_token', d.token);
+          location.replace('/');
+          return;
+        }
+      } catch (_) {}
+      // Device token rejected (server restarted) — clear it and show normal form
+      localStorage.removeItem('jarvis_device_token');
+      document.getElementById('reconnecting').style.display = 'none';
+    })();
+
+    const inp = document.getElementById('key');
+    inp.focus();
+
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.toUpperCase().replace(/[^A-Z2-9]/g, '');
+      if (inp.value.length === 6) doLogin();
+    });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+    async function doLogin() {
+      const key = inp.value.trim();
+      if (key.length < 6) { shake(); return; }
+      let data;
+      try {
+        const r = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: key })
+        });
+        data = await r.json();
+      } catch (e) {
+        document.getElementById('err').textContent = 'שגיאת חיבור';
+        shake(); return;
+      }
+      if (data.ok && data.token) {
+        sessionStorage.setItem('jarvis_key', key);
+        sessionStorage.setItem('jarvis_token', data.token);
+        location.href = '/';
+      } else {
+        inp.value = '';
+        inp.focus();
+        document.getElementById('err').textContent = 'המפתח שגוי או שפג תוקפו';
+        shake();
+      }
+    }
+
+    function shake() {
+      const c = document.getElementById('card');
+      c.classList.remove('shake');
+      void c.offsetWidth;
+      c.classList.add('shake');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+# ── MARK LIII — what never belongs in the repository ──────────────────────────
+# Everything listed here is created by the app on first run. A fresh clone with
+# none of it present boots straight to the setup screen, which is the intended
+# first experience — so nothing here needs to be committed, and some of it must
+# never be.
+
+# ── Secrets. Committing any of these publishes them. ──────────────────────────
+config/api_keys.json
+config/.api_keys.lock
+config/.api-keys-*
+config/certs/
+config/whatsapp_web/
+**/token*.json
+**/client_secret*.json
+*credentials*.json
+.env
+.env.*
+/config.json
+/viewer/graph-data.js
+/.galaxy-runtime/
+/.runtime/
+/memory/focus-ledger.jsonl
+
+# ── Personal data the assistant accumulates about you ─────────────────────────
+memory/long_term.json
+memory/*.db
+memory/browser_jobs/
+memory/browser_use_profile/
+
+# ── Python build noise ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+.venv-browser/
+.artifacts/
+.pytest_cache/
+config/mcp.json
+config/integrations.json
+config/browser-use/
+config/browser_jobs/
+venv/
+env/
+ENV/
+
+# ── Editors and operating systems ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Runtime output ────────────────────────────────────────────────────────────
+*.log
+logs/
+downloads/
+screenshots/
+
+# Desktop distributions and local packaging state
+/release/
+/desktop-smoke/

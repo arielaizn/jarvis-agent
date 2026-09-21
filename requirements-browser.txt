@@ -1,0 +1,2 @@
+# Isolated from Jarvis's google-genai 2.x dependency.
+browser-use==0.13.10

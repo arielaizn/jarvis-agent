@@ -1,0 +1,15 @@
+{
+  "api_provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "notes_dir": "/absolute/path/to/your/notes",
+  "model_aliases": {
+    "gemini": "google/gemini-3.8-flash",
+    "gemini 3.8 flash": "google/gemini-3.8-flash",
+    "gemini-3.8-flash": "google/gemini-3.8-flash",
+    "astra": "openai/gpt-6-astra",
+    "gpt-6 astra": "openai/gpt-6-astra",
+    "gpt 6 astra": "openai/gpt-6-astra",
+    "gpt-6": "openai/gpt-6-astra",
+    "fable 5.1": "anthropic/claude-fable-5.1"
+  }
+}
