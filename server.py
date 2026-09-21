@@ -894,6 +894,13 @@ class GalaxyHandler(BaseHTTPRequestHandler):
                 result = app.brain.probe(app.default_model)
             elif path == "/preflight/model":
                 result = app.brain.probe(app.default_model)
+            elif path == '/preflight/voice-input':
+                import asyncio
+                from core.voice_probe import probe
+                try:
+                    result = asyncio.run(probe())
+                except Exception:
+                    raise BrainError('LIVE_MEDIA_UNAVAILABLE', 'בדיקת זיהוי הדיבור לא קיבלה תמלול.', 503) from None
             elif path == '/preflight/gemini':
                 result = app.gemini_preflight()
             elif path.startswith("/focus/"):

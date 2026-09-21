@@ -3132,6 +3132,7 @@ class RemoteKeyOverlay(QWidget):
 
 class MainWindow(QMainWindow):
     _galaxy_input_sig = Signal(str)
+    _voice_status_sig = Signal(str)
     _galaxy_open_sig = Signal()
     _local_say_sig = Signal(str)
     _live_audio_sig = Signal(str)
@@ -3212,7 +3213,8 @@ class MainWindow(QMainWindow):
         root = QVBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        root.addWidget(self._build_header())
+        self._native_header = self._build_header()
+        root.addWidget(self._native_header)
 
         body = QHBoxLayout()
         body.setContentsMargins(20, 16, 20, 18)
@@ -3327,6 +3329,8 @@ class MainWindow(QMainWindow):
         self._quiz_hide_sig.connect(self._hide_quiz)
         self._review_sig.connect(self._show_review)
         self._galaxy_input_sig.connect(self._galaxy_input)
+        self._voice_status = 'connecting'
+        self._voice_status_sig.connect(self._set_voice_status)
         self._galaxy_open_sig.connect(self._open_galaxy)
         self._local_say_sig.connect(self._local_say)
         self._live_audio_sig.connect(self._play_live_audio)
@@ -5474,6 +5478,7 @@ class MainWindow(QMainWindow):
                 print('[Galaxy] Native view failed:', type(exc).__name__)
                 return
         self._galaxy_mode = True
+        self._native_header.hide()
         self._workspace_stack.setCurrentWidget(self._galaxy_panel)
         self._footer.hide()
         self._galaxy_switch.setChecked(True)
@@ -5489,6 +5494,7 @@ class MainWindow(QMainWindow):
 
     def _show_hud_workspace(self):
         self._galaxy_mode = False
+        self._native_header.show()
         if self._galaxy_panel:
             self._galaxy_panel.bridge.stop()
         self._workspace_stack.setCurrentWidget(self._hud_workspace)
@@ -5626,7 +5632,34 @@ class MainWindow(QMainWindow):
         if self.on_interrupt:
             self.on_interrupt()
 
+    def _set_voice_status(self, status):
+        self._voice_status = status
+        if self._galaxy_panel:
+            self._galaxy_panel.bridge.voiceStatusChanged.emit(status)
+
     def _toggle_mute(self):
+        if self._muted:
+            from PySide6.QtCore import QMicrophonePermission
+            app = QApplication.instance()
+            permission = QMicrophonePermission()
+            state = app.checkPermission(permission)
+            if state == Qt.PermissionStatus.Undetermined:
+                if getattr(self, '_mic_permission_pending', False):
+                    return
+                self._mic_permission_pending = True
+                def granted(result):
+                    self._mic_permission_pending = False
+                    if result.status() == Qt.PermissionStatus.Granted:
+                        if self._muted: self._apply_mute_toggle()
+                    else: self._set_voice_status('permission_denied')
+                app.requestPermission(permission, self, granted)
+                return
+            if state == Qt.PermissionStatus.Denied:
+                self._set_voice_status('permission_denied')
+                return
+        self._apply_mute_toggle()
+
+    def _apply_mute_toggle(self):
         self._muted = not self._muted
         self._native_ear_btn.setText('המיקרופון כבוי' if self._muted else 'המיקרופון פעיל')
         self._native_ear_btn.setChecked(not self._muted)
@@ -5757,6 +5790,9 @@ class JarvisUI:
 
     def galaxy_utterance(self, text):
         self._win._galaxy_input_sig.emit(str(text))
+
+    def voice_status(self, status):
+        self._win._voice_status_sig.emit(str(status))
 
     def open_galaxy(self):
         self._win._galaxy_open_sig.emit()

@@ -29,7 +29,7 @@ def qt_app():
 @pytest.fixture
 def owner(qt_app):
     value = QObject()
-    value.window = SimpleNamespace(_muted=True, _galaxy_speaking=False, set_microphone_enabled=Mock())
+    value.window = SimpleNamespace(_muted=True, _galaxy_speaking=False, hud=SimpleNamespace(speaking=False), set_microphone_enabled=Mock())
     return value
 
 
@@ -84,6 +84,7 @@ class FakeStdin:
 class FakeSpeechProcess:
     def __init__(self):
         self.stdin = FakeStdin()
+        self.stdout = []
         self.finished = threading.Event()
         self.wait_started = threading.Event()
         self.wait_thread = None
@@ -280,3 +281,31 @@ def test_open_action_uses_existing_native_window_instead_of_external_browser(mon
     assert result['ok'] is True
     player.open_galaxy.assert_called_once_with()
     external_browser.assert_not_called()
+
+
+def test_first_party_ear_button_reaches_native_permission_gate(owner):
+    requests=[]
+    def toggle():
+        requests.append(True)
+        owner.window._muted=not owner.window._muted
+    owner.window._toggle_mute=toggle
+    bridge=native_galaxy.NativeBridge(owner)
+    bridge.setEarsEnabled(True)
+    assert bridge.earState() is True
+    bridge.setEarsEnabled(True)
+    assert len(requests)==1
+    bridge.setEarsEnabled(False)
+    assert bridge.earState() is False
+    assert len(requests)==2
+
+
+def test_native_speech_state_is_published_to_face_and_cleared(owner):
+    bridge=native_galaxy.NativeBridge(owner, muted_test=True)
+    states=[];frames=[]
+    bridge.speakingChanged.connect(states.append)
+    bridge.audioFrame.connect(lambda *v:frames.append(v))
+    bridge._speaking(True)
+    bridge._speaking(False)
+    assert states==[True,False]
+    assert owner.window.hud.speaking is False
+    assert frames[-1]==(0.,0.,0.)

@@ -97,7 +97,7 @@ _CRYPTOJS_CDN  = ("https://cdnjs.cloudflare.com/ajax/libs/"
 _CRYPTOJS_FILE = STATIC_DIR / "crypto-js.min.js"
 
 
-def _ensure_network_access(port: int) -> None:
+def _ensure_network_access(port: int, *, interactive: bool = False) -> None:
     """Cross-platform, best-effort: open port in the OS firewall for LAN access.
 
     Runs in a background thread — never blocks uvicorn startup.
@@ -107,6 +107,10 @@ def _ensure_network_access(port: int) -> None:
     macOS   : osascript admin dialog if the Application Firewall is on.
     Linux   : pkexec GUI → sudo -n → prints manual command as fallback.
     """
+    # Starting the desktop is never a request to alter the system firewall.
+    # LAN administrators can invoke this explicitly with interactive=True.
+    if not interactive:
+        return
     import sys, subprocess, os, tempfile, threading
 
     # ── Windows ──────────────────────────────────────────────────────────────
@@ -250,12 +254,10 @@ def _ensure_network_access(port: int) -> None:
                 return  # already allowed
 
             print("[Dashboard] One-time network setup — enter your password in the macOS dialog.")
-            subprocess.run(
-                ["osascript", "-e",
-                 f'do shell script "{fw_ctl} --add {py} && {fw_ctl} --unblockapp {py}"'
-                 f' with administrator privileges'],
-                timeout=60,
-            )
+            import shlex, json
+            command = f'{fw_ctl} --add {shlex.quote(py)} && {fw_ctl} --unblockapp {shlex.quote(py)}'
+            subprocess.run(["osascript", "-e", 'do shell script ' + json.dumps(command) +
+                            ' with administrator privileges'], timeout=60, check=True)
         except Exception:
             pass  # macOS firewall is off by default — silent failure is fine
         return

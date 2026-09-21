@@ -188,6 +188,12 @@ class Harness:
             self.require(wav.getnframes() > 2400, 'voice audio empty or too short')
         return 'real Gemini 3.8 Live audio, 24 kHz mono'
 
+    def voice_input(self):
+        result = self.api('/preflight/voice-input', {})
+        self.require(result.get('transcribed') is True and result.get('model')=='gemini-3.8-live', 'Live ASR did not transcribe the real PCM cue')
+        self.require(result.get('microphone_opened') is False, 'Probe must not activate the microphone')
+        return 'real PCM through local speech boundaries and Gemini Live input transcription'
+
     def gemini_task(self):
         result = self.api('/preflight/gemini', {})
         self.require(result.get('ok') is True and result.get('file_verified') is True
@@ -300,6 +306,7 @@ class Harness:
             ('Remember writes and next chat retrieves', self.remember),
             ('Vision answers a real JPEG', self.vision),
             ('Live voice returns real audio', self.live_voice),
+            ('Live voice input returns a transcript', self.voice_input),
             ('Immediate acknowledgment is ready', self.acknowledgment),
             ('Voice responds only to addressed requests', self.voice_address_filter),
             ('Served files match disk', self.served_bytes),

@@ -107,12 +107,7 @@ RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
 GALAXY_TTS_TAIL_SECONDS = 0.45
 
-GALAXY_TRANSCRIPTION_INSTRUCTION = (
-    "You provide input audio transcription to another application. "
-    "The application answers the user independently. Do not answer questions, "
-    "give advice, introduce yourself, or call tools. Remain silent. "
-    "Transcribe the user's own words in their original language."
-)
+from core.speech_activity import ASR_INSTRUCTION as GALAXY_TRANSCRIPTION_INSTRUCTION
 
 # RMS below which 16-bit PCM is treated as room silence; above _LEVEL_FULL it
 # reads as a full-height waveform. Tuned so ordinary speech lands mid-range and
@@ -1185,19 +1180,8 @@ class JarvisLive:
 
     def _build_config(self) -> types.LiveConnectConfig:
         """Live is strictly an ASR transport in both native workspaces."""
-        cfg = {
-            "response_modalities": ["AUDIO"],
-            "input_audio_transcription": {},
-            "system_instruction": GALAXY_TRANSCRIPTION_INSTRUCTION,
-            "tools": [],
-            "context_window_compression": types.ContextWindowCompressionConfig(
-                sliding_window=types.SlidingWindow()),
-        }
-        if self._tuned_live:
-            timing = self._tuning_config().get("realtime_input_config")
-            if timing is not None:
-                cfg["realtime_input_config"] = timing
-        return types.LiveConnectConfig(**cfg)
+        from core.speech_activity import asr_config
+        return asr_config()
 
     def _build_hud_config(self) -> types.GenerateContentConfig:
         from datetime import datetime
@@ -1495,21 +1479,33 @@ class JarvisLive:
         )
 
     async def _send_realtime(self):
+        from core.speech_activity import SpeechActivity
+        activity=SpeechActivity()
+        self._asr_activity_active=False
         while True:
-            msg = await self.out_queue.get()
-            if not self._transport_current() or self._galaxy_mic_blocked():
+            try:
+                msg=await asyncio.wait_for(self.out_queue.get(), .1)
+            except asyncio.TimeoutError:
+                if activity.active and self._galaxy_mic_blocked():
+                    await self.session.send_realtime_input(activity_end=types.ActivityEnd())
+                    activity.reset()
+                    self._asr_activity_active=False
                 continue
-            # Gemini 3.x Live rejects the old realtime_input.media_chunks field
-            # (what `media=...` maps to) and closes the socket with a 1007. Send
-            # mic / phone PCM through the new `audio` field instead. Queue items
-            # are {"data": <bytes>, "mime_type": <str>} from _listen_audio and
-            # the phone relay.
-            await self.session.send_realtime_input(
-                audio=types.Blob(
-                    data=msg["data"],
-                    mime_type=msg.get("mime_type", "audio/pcm"),
-                )
-            )
+            if not self._transport_current() or self._galaxy_mic_blocked():
+                if activity.active:
+                    await self.session.send_realtime_input(activity_end=types.ActivityEnd())
+                activity.reset()
+                self._asr_activity_active=False
+                continue
+            for kind,data in activity.feed(msg['data']):
+                if kind=='start':
+                    self._asr_activity_active=True
+                    await self.session.send_realtime_input(activity_start=types.ActivityStart())
+                elif kind=='end':
+                    self._asr_activity_active=False
+                    await self.session.send_realtime_input(activity_end=types.ActivityEnd())
+                else:
+                    await self.session.send_realtime_input(audio=types.Blob(data=data,mime_type='audio/pcm;rate=16000'))
 
     async def _listen_audio(self):
         print("[JARVIS] 🎤 Mic started")
@@ -1635,9 +1631,12 @@ class JarvisLive:
 
                 with _mic_stream:
                     print("[JARVIS] 🎤 Mic stream open")
+                    self.ui.voice_status('listening')
                     while not self.ui.muted:
                         await asyncio.sleep(0.1)
+                self.ui.voice_status('ready')
         except Exception as e:
+            self.ui.voice_status('device_error')
             print(f"[JARVIS] ❌ Mic: {e}")
             raise
 
@@ -1654,39 +1653,43 @@ class JarvisLive:
                 types.Part(text=f"[FRESH IMAGE SOURCE: {source}]\n{question}")]
 
     async def _receive_audio(self):
-        """Forward completed input transcripts; discard every Live answer."""
+        """Forward input transcripts without waiting for discarded model speech."""
         print("[JARVIS] ASR receiver started")
-        in_buf = []
+        in_buf=[];last_input=0.;buffer_epoch=self._mode_epoch;buffer_generation=self._hud_generation
         if not hasattr(self, '_voice_pending'):self._voice_pending=set()
-        while True:
-            async for response in self.session.receive():
-                if not self._transport_current():
-                    in_buf = []
-                    continue
-                sc = response.server_content
-                if sc:
-                    transcription = sc.input_transcription
-                    if transcription and transcription.text:
-                        txt = _clean_transcript(transcription.text)
-                        if txt:
-                            in_buf.append(txt)
-                    finished = bool(transcription and transcription.finished)
-                    if finished or sc.turn_complete:
-                        utterance = " ".join(in_buf).strip()
-                        in_buf = []
-                        if utterance and not self._galaxy_mic_blocked():
-                            task=asyncio.create_task(self._handle_voice_utterance(utterance,self._mode_epoch,self._hud_generation))
-                            self._voice_pending.add(task)
-                            task.add_done_callback(self._voice_pending.discard)
-                if response.tool_call:
-                    denied = [types.FunctionResponse(
-                        id=fc.id, name=fc.name,
-                        response={"error": "The ASR transport cannot execute tools."},
-                    ) for fc in response.tool_call.function_calls]
-                    if denied and self._transport_current():
-                        await self.session.send_tool_response(function_responses=denied)
-                # response.data, model output, output transcription and session
-                # resumption handles are deliberately never consumed.
+        def submit():
+            nonlocal in_buf
+            utterance=" ".join(in_buf).strip();in_buf=[]
+            if utterance and not self._galaxy_mic_blocked():
+                task=asyncio.create_task(self._handle_voice_utterance(utterance,buffer_epoch,buffer_generation))
+                self._voice_pending.add(task);task.add_done_callback(self._voice_pending.discard)
+        async def settle():
+            while True:
+                await asyncio.sleep(.1)
+                if (in_buf and not getattr(self,'_asr_activity_active',False)
+                        and time.monotonic()-last_input >= .45):submit()
+        flush=asyncio.create_task(settle())
+        try:
+            while True:
+                async for response in self.session.receive():
+                    if not self._transport_current():
+                        in_buf=[];continue
+                    sc=response.server_content
+                    if sc:
+                        transcription=sc.input_transcription
+                        if transcription and transcription.text:
+                            txt=_clean_transcript(transcription.text)
+                            if txt:
+                                if not in_buf:buffer_epoch=self._mode_epoch;buffer_generation=self._hud_generation
+                                in_buf.append(txt);last_input=time.monotonic()
+                        if bool(transcription and transcription.finished) or sc.turn_complete:submit()
+                    if response.tool_call:
+                        denied=[types.FunctionResponse(id=fc.id,name=fc.name,response={"error":"The ASR transport cannot execute tools."}) for fc in response.tool_call.function_calls]
+                        if denied and self._transport_current():await self.session.send_tool_response(function_responses=denied)
+        finally:
+            flush.cancel()
+            import contextlib
+            with contextlib.suppress(asyncio.CancelledError):await flush
 
     async def _handle_voice_utterance(self, utterance, epoch, generation=None):
         """No acknowledgment, logging or task submission before address filtering."""
@@ -2220,6 +2223,7 @@ class JarvisLive:
         while True:
             try:
                 print("[JARVIS] Connecting...")
+                self.ui.voice_status('connecting')
                 self.ui.set_state("THINKING")
                 self._reconnect_event.clear()
                 self._session_mode_epoch = self._mode_epoch
@@ -2232,7 +2236,7 @@ class JarvisLive:
                 # back to v1beta.
                 client = genai.Client(
                     api_key=_get_api_key(),
-                    http_options={"api_version": "v1alpha" if self._enhanced_live else "v1beta"}
+                    http_options={"api_version": "v1beta"}
                 )
 
                 async with (
@@ -2255,6 +2259,7 @@ class JarvisLive:
                     self._interrupted          = False
 
                     print("[JARVIS] Connected.")
+                    self.ui.voice_status('ready')
                     if _resumed_with:
                         # Say it plainly: the difference between "it reconnected"
                         # and "it reconnected and still knows what we were doing"
@@ -2335,6 +2340,7 @@ class JarvisLive:
                 # Authentication exceptions can contain a request URL with a
                 # credential. Keep classification local and logs secret-free.
                 print(f"[JARVIS] Connection error: {type(e).__name__}")
+                self.ui.voice_status('connection_error')
 
                 # Turn-taking / media / thinking knobs rejected by the server
                 # (preview API drift) — drop them first, because they are the

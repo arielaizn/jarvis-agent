@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import time
+import json
 
 from PySide6.QtCore import QFile, QIODevice, QObject, Qt, QTimer, QUrl, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
@@ -49,6 +50,8 @@ class NativeBridge(QObject):
     speakingChanged = Signal(bool)
     _speechFinished = Signal(int)
     speechError = Signal(str)
+    audioFrame = Signal(float, float, float)
+    voiceStatusChanged = Signal(str)
 
     def __init__(self, owner, muted_test=False):
         super().__init__(owner)
@@ -57,7 +60,6 @@ class NativeBridge(QObject):
         self.process = None
         self.lock = threading.RLock()
         self.generation = 0
-        self.speakingChanged.connect(self._speaking)
         self._speechFinished.connect(self._finished)
         self.ack = QSoundEffect(self)
         from memory.config_manager import get_output_device
@@ -69,10 +71,35 @@ class NativeBridge(QObject):
         from core.acknowledgment import path
         self.ack.setSource(QUrl.fromLocalFile(str(path())))
         self.ack.playingChanged.connect(self._ack_changed)
+        self.ack_frames = []
+        self.ack_clock = 0.0
+        self.ack_timer = QTimer(self)
+        self.ack_timer.setInterval(20)
+        self.ack_timer.timeout.connect(self._ack_frame)
+        try:
+            import wave
+            from core.speech_motion import mouth_frame, HOP_SAMPLES
+            with wave.open(str(path()), 'rb') as wav:
+                if (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) == (24000, 1, 2):
+                    while chunk := wav.readframes(HOP_SAMPLES):
+                        self.ack_frames.append(mouth_frame(chunk))
+        except (OSError, ValueError):
+            pass
 
     def _ack_changed(self):
+        if self.ack.isPlaying():
+            self.ack_clock = time.monotonic()
+            self.ack_timer.start()
+        else:
+            self.ack_timer.stop()
         if not self.ack.isPlaying() and (self.process is None or self.process.poll() is not None):
             self._speaking(False)
+
+    def _ack_frame(self):
+        index = int((time.monotonic() - self.ack_clock) / .02)
+        if 0 <= index < len(self.ack_frames):
+            frame = self.ack_frames[index]
+            self.audioFrame.emit(frame['level'], frame['open'], frame['wide'])
 
     @Slot()
     def acknowledge(self):
@@ -88,6 +115,10 @@ class NativeBridge(QObject):
 
     def _speaking(self, speaking):
         self.owner.window._galaxy_speaking = speaking
+        self.owner.window.hud.speaking = speaking
+        self.speakingChanged.emit(speaking)
+        if not speaking:
+            self.audioFrame.emit(0.0, 0.0, 0.0)
 
     def _finished(self, generation):
         with self.lock:
@@ -99,15 +130,33 @@ class NativeBridge(QObject):
         from core.permissions import show_permissions
         self.owner.window._permission_dialog = show_permissions(self.owner.window)
 
+    @Slot()
+    def showAudioSettings(self):
+        self.owner.window._open_audio_devices()
+
+    @Slot()
+    def enterCompact(self):
+        self.owner.window._companion.enter(manual=True)
+
+    @Slot()
+    def showClassic(self):
+        self.owner.window._show_hud_workspace()
+
     @Slot(result=bool)
     def earState(self):
         return not self.owner.window._muted
 
     @Slot(bool)
     def setEarsEnabled(self, enabled):
-        # Web content has no authority to enable the microphone. The physical
-        # Qt header button owns it; the bridge exposes its current state only.
+        # The first-party ear button is an explicit user action. Sensor organs
+        # never call this slot. Test views cannot activate capture.
+        if not self.muted_test and bool(enabled) == self.owner.window._muted:
+            self.owner.window._toggle_mute()
         self.earsChanged.emit(not self.owner.window._muted)
+
+    @Slot(result=str)
+    def voiceStatus(self):
+        return getattr(self.owner.window, '_voice_status', 'connecting')
 
     @Slot(str, str)
     def say(self, text, kind='answer'):
@@ -139,7 +188,7 @@ class NativeBridge(QObject):
             self._speaking(True)
             try:
                 self.process = subprocess.Popen(command, stdin=subprocess.PIPE,
-                                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=ROOT)
+                                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=ROOT)
                 process = self.process
             except OSError:
                 self._speaking(False)
@@ -151,6 +200,15 @@ class NativeBridge(QObject):
                 process.stdin.close()
             except (OSError, ValueError):
                 pass
+            for line in process.stdout:
+                if generation != self.generation:
+                    continue
+                try:
+                    frame = json.loads(line)
+                    values = [max(0.0, min(1.0, float(frame[k]))) for k in ('level','open','wide')]
+                    self.audioFrame.emit(*values)
+                except (ValueError, KeyError, TypeError):
+                    continue
             code = process.wait()
             if code and generation == self.generation:
                 self.speechError.emit('הקול של Gemini 3.8 Live אינו זמין כרגע. התשובה מוצגת בחלון.')

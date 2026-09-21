@@ -183,6 +183,9 @@ export class Organs {
       const pose=this.pose.detectForVideo(this.cameraVideo,now);
       const face=this.face.detectForVideo(this.cameraVideo,now);
       this.posture=postureFromLandmarks(pose.landmarks,face.faceLandmarks);
+      // Ephemeral local gaze target. Never part of HTTP posture or stored notes.
+      const nose=face.faceLandmarks?.[0]?.[1];
+      window.dispatchEvent(new CustomEvent('jarvis:gaze',{detail:nose?{present:true,x:Math.max(-1,Math.min(1,(.5-nose.x)*3)),y:Math.max(-1,Math.min(1,(nose.y-.5)*3))}:{present:false}}));
       if(now-this.lastPublish>=POSTURE_PUBLISH_MS){this.lastPublish=now;await this.api('/focus/posture',{...this.posture,active:true});}
       this.changed();
     } catch(error) {

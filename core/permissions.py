@@ -118,7 +118,7 @@ def show_permissions(parent, first_run=False):
         if kind in {'microphone','camera'}:
             permission = QMicrophonePermission() if kind=='microphone' else QCameraPermission()
             app=QCoreApplication.instance()
-            app.requestPermission(permission, lambda p: refresh())
+            app.requestPermission(permission, dialog, lambda p: refresh())
         elif not open_system_permission(kind):
             message.setText('במערכת הזו הגישה ניתנת דרך חשבון המשתמש ובוחר השיתוף בעת השימוש. אין הרשאת־על אחת לכל התוכנות.')
         else:
