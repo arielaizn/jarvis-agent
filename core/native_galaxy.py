@@ -17,7 +17,7 @@ from PySide6.QtMultimedia import QSoundEffect, QMediaDevices
 from core.app_paths import runtime_root
 ROOT = runtime_root()
 LOCAL_HOST = '127.0.0.1'
-LOCAL_PORT = 4700
+LOCAL_PORT = int(os.environ.get('JARVIS_PORT', '4700'))
 MAX_SPEECH_CHARACTERS = 2400
 NATIVE_ATTACH_INTERVAL_MS = 10000
 
@@ -251,7 +251,7 @@ class GalaxyPanel(QWidget):
     def load(self):
         suffix = '&mute=1' if self.muted_test else ''
         suffix += '&focusprobe=1' if self.probe else ''
-        self.web.setUrl(QUrl('http://127.0.0.1:4700/?embedded=1' + suffix))
+        self.web.setUrl(QUrl(f'http://127.0.0.1:{LOCAL_PORT}/?embedded=1' + suffix))
 
     def loaded(self, ok):
         self.status.setVisible(not ok)

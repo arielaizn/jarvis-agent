@@ -1,5 +1,6 @@
 """Launch and address the same local galaxy from the native Jarvis tool loop."""
 import json
+import os
 import errno
 from core.file_lock import exclusive_file_lock
 from pathlib import Path
@@ -13,7 +14,7 @@ import webbrowser
 
 from core.app_paths import runtime_root
 ROOT = runtime_root()
-BASE = 'http://127.0.0.1:4700'
+BASE = 'http://127.0.0.1:' + str(int(os.environ.get('JARVIS_PORT', '4700')))
 START_TIMEOUT_SECONDS = 30
 MAX_RESPONSE_BYTES = 64 * 1024 * 1024
 _LAUNCH_LOCK = threading.Lock()

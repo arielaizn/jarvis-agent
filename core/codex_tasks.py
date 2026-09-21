@@ -191,6 +191,10 @@ class TaskManager:
         request = user_context[-1]
         if len(user_context) == 2:
             request = prompt.replace(TASK_INSTRUCTIONS, '')
+        from core.skills import skill_prompt_context
+        context = skill_prompt_context(task['_question'])
+        if context:
+            request = 'Requested skill instructions (within this task):\n' + context + '\n\n' + request
         kwargs = {} if task['mode'] == 'computer' else {'read_only': True}
         return gemini_tasks.execute(request, cancel=task['_cancel'], progress=progress, **kwargs)
 
