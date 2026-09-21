@@ -18,13 +18,19 @@ if sys.platform=='darwin':
     from apfs_copy import install
     install()
     app=ROOT/'dist'/'Jarvis Agent.app'
-    stage=ROOT/'build'/'dmg';stage.mkdir(exist_ok=True)
-    link=stage/'Applications'
-    if not link.exists():link.symlink_to('/Applications')
-    shutil.copytree(app,stage/app.name,symlinks=True,dirs_exist_ok=True)
-    target=OUT/f'Jarvis-Agent-{VERSION}-macOS-{ARCH}.dmg'
-    subprocess.run(['hdiutil','create','-volname','Jarvis Agent','-srcfolder',str(stage),'-ov','-format','UDZO',str(target)],check=True)
-    subprocess.run(['hdiutil','verify',str(target)],check=True)
+    if '--zip' in sys.argv:
+        target=OUT/f'Jarvis-Agent-{VERSION}-macOS-{ARCH}.zip'
+        subprocess.run(['ditto','-c','-k','--sequesterRsrc','--keepParent',str(app),str(target)],check=True)
+        with zipfile.ZipFile(target) as archive:
+            if archive.testzip() is not None:raise RuntimeError('macOS archive checksum failed')
+    else:
+        stage=ROOT/'build'/'dmg';stage.mkdir(exist_ok=True)
+        link=stage/'Applications'
+        if not link.exists():link.symlink_to('/Applications')
+        shutil.copytree(app,stage/app.name,symlinks=True,dirs_exist_ok=True)
+        target=OUT/f'Jarvis-Agent-{VERSION}-macOS-{ARCH}.dmg'
+        subprocess.run(['hdiutil','create','-volname','Jarvis Agent','-srcfolder',str(stage),'-ov','-format','UDZO',str(target)],check=True)
+        subprocess.run(['hdiutil','verify',str(target)],check=True)
 elif sys.platform=='win32':
     subprocess.run(['iscc','packaging/windows.iss'],cwd=ROOT,check=True)
     with zipfile.ZipFile(OUT/f'Jarvis-Agent-{VERSION}-Windows-{ARCH}-portable.zip','w',zipfile.ZIP_DEFLATED) as archive:
