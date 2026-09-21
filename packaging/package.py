@@ -15,6 +15,8 @@ VERSION='1.0.0'
 ARCH='arm64' if platform.machine().lower() in {'arm64','aarch64'} else 'x64'
 
 if sys.platform=='darwin':
+    from apfs_copy import install
+    install()
     app=ROOT/'dist'/'Jarvis Agent.app'
     stage=ROOT/'build'/'dmg';stage.mkdir(exist_ok=True)
     link=stage/'Applications'

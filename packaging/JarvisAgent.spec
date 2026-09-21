@@ -3,6 +3,8 @@ from pathlib import Path
 import sys, json, importlib.util
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 root=Path(SPECPATH).parent
+clone_spec=importlib.util.spec_from_file_location('apfs_copy',root/'packaging/apfs_copy.py')
+clone_module=importlib.util.module_from_spec(clone_spec);clone_spec.loader.exec_module(clone_module);clone_module.install()
 spec=importlib.util.spec_from_file_location('export_source',root/'packaging/export_source.py')
 export=importlib.util.module_from_spec(spec);spec.loader.exec_module(export)
 files=[p for p in export.sources(root) if p.relative_to(root).parts[0] not in {'tests','.github','packaging'}]

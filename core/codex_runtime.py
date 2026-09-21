@@ -240,6 +240,12 @@ def action_config_args(sandbox):
         for name in approved:
             scope = CONTROL_MCP_CONFIG_PATHS.get(name, f"mcp_servers.{name}")
             args.extend(["-c", f'{scope}.default_tools_approval_mode="approve"'])
+    if sandbox == "danger-full-access":
+        # Bundled on every platform, independent of the developer's MCP profile.
+        args.extend(["-c", "mcp_servers.jarvis_computer.command=" + json.dumps(sys.executable),
+                     "-c", 'mcp_servers.jarvis_computer.args=["-m","core.computer_mcp"]',
+                     "-c", "mcp_servers.jarvis_computer.enabled=true",
+                     "-c", 'mcp_servers.jarvis_computer.default_tools_approval_mode="approve"'])
     # Project-owned MCP tool keeps TypeSafe auth out of prompts and shell
     # arguments. It does not broaden the CLI shell's network sandbox.
     python = Path(sys.executable)

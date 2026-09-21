@@ -130,7 +130,7 @@ def main():
         return smoke_test(root, args[1])
     if args and args[0] == '-m':
         module = args[1]
-        allowed = {'core.live_speech','core.galaxy_card','core.typesafe_mcp','core.typesafe_client'}
+        allowed = {'core.live_speech','core.galaxy_card','core.typesafe_mcp','core.typesafe_client','core.computer_mcp'}
         if module not in allowed: raise SystemExit('This optional worker needs an external Python installation: ' + module)
         sys.argv = [module, *args[2:]]
         runpy.run_module(module, run_name='__main__')

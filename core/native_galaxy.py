@@ -94,6 +94,11 @@ class NativeBridge(QObject):
             if generation == self.generation:
                 self._speaking(False)
 
+    @Slot()
+    def showPermissions(self):
+        from core.permissions import show_permissions
+        self.owner.window._permission_dialog = show_permissions(self.owner.window)
+
     @Slot(result=bool)
     def earState(self):
         return not self.owner.window._muted

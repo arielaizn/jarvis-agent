@@ -25,7 +25,7 @@ PROVIDER_CHAIN_GAP_SECONDS = 20
 PROVIDER_ROUTES = {'/chat', '/see', '/preflight/api', '/preflight/model'}
 TRANSIENT_RETRY_SECONDS = 30
 MAX_RESPONSE_BYTES = 60 * 1024 * 1024
-STATIC_SUFFIXES = {'.html', '.css', '.js', '.svg', '.png', '.jpg', '.jpeg', '.ico', '.json'}
+STATIC_SUFFIXES = {'.html', '.css', '.js', '.svg', '.png', '.jpg', '.jpeg', '.ico', '.json', '.mjs', '.wasm', '.task', '.glb', '.obj', '.woff', '.woff2'}
 SAFE_ERROR_CODES = {
     'API_KEY_NOT_CONFIGURED', 'API_AUTH_FAILED', 'API_CREDITS_REQUIRED', 'API_RATE_LIMIT', 'API_DAILY_QUOTA',
     'MODEL_UNAVAILABLE', 'MODEL_ID_MISSING', 'MODEL_ID_MISMATCH', 'MODEL_EMPTY_ANSWER',
@@ -214,7 +214,7 @@ class Harness:
         return '%d files match disk byte-for-byte' % count
 
     def config_private(self):
-        routes = ['/config.json', '/../config.json', '/%2e%2e/config.json', '/%2e%2e%2fconfig.json', '/config/api_keys.json', '/server.py', '/.env']
+        routes = ['/config.json', '/../config.json', '/%2e%2e/config.json', '/%2e%2e%2fconfig.json', '/config/api_keys.json', '/config/integrations.json', '/config/command-center.json', '/config/onboarding.json', '/server.py', '/.env']
         for route in routes:
             status, body = self.request(route, raw=True)
             self.require(status in (400, 403, 404), 'SECURITY FAILURE: sensitive path reachable: ' + route)

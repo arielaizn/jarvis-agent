@@ -3344,8 +3344,14 @@ class MainWindow(QMainWindow):
 
         self._overlay: SetupOverlay | None = None
         self._ready = self._check_config()
+        # Codex users do not need a Gemini key to enter the desktop.
         if not self._ready:
-            self._show_setup()
+            from core.credentials import read_config
+            self._ready = read_config().get('api_provider', 'codex') == 'codex'
+        from core.permissions import needs_onboarding
+        if needs_onboarding() and os.environ.get('JARVIS_GALAXY_MUTE') != '1':
+            QTimer.singleShot(1000, self._show_permissions)
+
 
         from core.companion import DesktopCompanion
         self._companion = DesktopCompanion(self)
@@ -3883,8 +3889,8 @@ class MainWindow(QMainWindow):
 
     def _build_header(self) -> QWidget:
         w = QWidget()
-        w.setFixedHeight(54)
-        w.setStyleSheet(f"background: {C.DARK}; border-bottom: 1px solid {C.BORDER_B};")
+        w.setFixedHeight(48)
+        w.setStyleSheet("background:#0f1720;border-bottom:1px solid #273641;")
         lay = QHBoxLayout(w)
         lay.setContentsMargins(16, 0, 16, 0)
 
@@ -3919,12 +3925,14 @@ class MainWindow(QMainWindow):
         compact.setStyleSheet(self._drawer_btn.styleSheet())
         compact.clicked.connect(lambda: self._companion.enter(manual=True))
         lay.addWidget(compact)
+        self._legacy_display_buttons = []
         for caption, visual in (("פנים", "face"), ("ליבה", "core")):
             display_button = QPushButton(caption)
             display_button.setMinimumSize(48,32)
             display_button.setStyleSheet(compact.styleSheet())
             display_button.clicked.connect(lambda checked=False, value=visual: self._choose_display(value))
             lay.addWidget(display_button)
+            self._legacy_display_buttons.append(display_button)
         self._galaxy_switch = QPushButton("הערות ומיקוד")
         self._galaxy_switch.setCheckable(True)
         self._galaxy_switch.clicked.connect(lambda checked: self._open_galaxy() if checked else self._show_hud_workspace())
@@ -5469,7 +5477,9 @@ class MainWindow(QMainWindow):
         self._workspace_stack.setCurrentWidget(self._galaxy_panel)
         self._footer.hide()
         self._galaxy_switch.setChecked(True)
-        self._galaxy_switch.setText("חזרה לשליטה במחשב")
+        self._galaxy_switch.setText("ממשק קלאסי")
+        for widget in [self._title_lbl,self._sub_lbl,self._clock_lbl,self._date_lbl,*self._legacy_display_buttons]:
+            widget.hide()
         self._drawer_btn.setChecked(False)
         self._quick_drawer.hide()
         if self._overlay:
@@ -5484,7 +5494,9 @@ class MainWindow(QMainWindow):
         self._workspace_stack.setCurrentWidget(self._hud_workspace)
         self._footer.show()
         self._galaxy_switch.setChecked(False)
-        self._galaxy_switch.setText("הערות ומיקוד")
+        self._galaxy_switch.setText("מרכז הפיקוד")
+        for widget in [self._title_lbl,self._sub_lbl,self._clock_lbl,self._date_lbl,*self._legacy_display_buttons]:
+            widget.show()
         if self.on_galaxy_mode_change:
             self.on_galaxy_mode_change(False)
         if not self._ready:
@@ -5667,6 +5679,10 @@ class MainWindow(QMainWindow):
             return bool(d.get("gemini_api_key")) and bool(d.get("os_system"))
         except Exception:
             return False
+
+    def _show_permissions(self):
+        from core.permissions import show_permissions
+        self._permission_dialog = show_permissions(self, first_run=True)
 
     def _show_setup(self):
         ov = SetupOverlay(self.centralWidget())
