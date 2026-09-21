@@ -25,6 +25,13 @@ datas+=collect_data_files('certifi')
 datas+=collect_data_files('PySide6', includes=['**/LICENSE*','**/licenses/*'])
 a=Analysis([str(root/'desktop.py')],pathex=[str(root)],binaries=[],datas=datas,hiddenimports=hidden,
            hookspath=[],runtime_hooks=[],excludes=['PyQt6','PyQt5','PySide2','tkinter','torch','tensorflow','pytest','sklearn','scipy','pandas','matplotlib','IPython','notebook'])
+# Some Qt wheels contain a non-version Resources directory under Versions.
+# PyInstaller may select it as the framework version; Qt resolves Current -> A.
+if sys.platform == 'darwin':
+    wrong = 'QtWebEngineCore.framework/Versions/Resources/'
+    correct = 'QtWebEngineCore.framework/Versions/A/'
+    a.datas = [(dest.replace(wrong, correct), source, kind) for dest, source, kind in a.datas]
+    a.binaries = [(dest.replace(wrong, correct), source, kind) for dest, source, kind in a.binaries]
 pyz=PYZ(a.pure)
 exe=EXE(pyz,a.scripts,[],exclude_binaries=True,name='JarvisAgent',debug=False,bootloader_ignore_signals=False,
         strip=False,upx=False,console=False,icon=str(root/'config/jarvis.ico'))
@@ -36,3 +43,7 @@ if sys.platform=='darwin':
                     'NSCameraUsageDescription':'Jarvis uses the camera only when you enable it.',
                     'NSAppleEventsUsageDescription':'Jarvis controls applications when you request a task.',
                     'NSHighResolutionCapable':True})
+
+    signer_spec=importlib.util.spec_from_file_location('sign_macos',root/'packaging/sign_macos.py')
+    signer=importlib.util.module_from_spec(signer_spec);signer_spec.loader.exec_module(signer)
+    signer.sign(app.name)
